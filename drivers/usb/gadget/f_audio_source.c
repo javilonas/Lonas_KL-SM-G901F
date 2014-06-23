@@ -594,6 +594,9 @@ audio_bind(struct usb_configuration *c, struct usb_function *f)
 	/* AUDIO_AC_INTERFACE */
 	ac_header_desc.baInterfaceNr[0] = status;
 
+	/* AUDIO_AC_INTERFACE */
+	ac_header_desc.baInterfaceNr[0] = status;
+
 	status = usb_interface_id(c, f);
 	if (status < 0)
 		goto fail;
