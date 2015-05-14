@@ -1,7 +1,1 @@
-#
-# Contact: haeil.hyun <haeil.hyun@samsung.com> for more info
-#
-
-# define for DM-VERITY
-
-CONFIG_DM_VERITY=y
+# CONFIG_DM_VERITY is not set
