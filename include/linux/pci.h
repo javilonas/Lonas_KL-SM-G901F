@@ -286,7 +286,9 @@ struct pci_dev {
 	unsigned int	d3_delay;	/* D3->D0 transition time in ms */
 	unsigned int	d3cold_delay;	/* D3cold->D0 transition time in ms */
 
-#ifdef CONFIG_PCIEASPM
+#if defined(CONFIG_PCIEASPM) || (defined(CONFIG_BCMDHD_PCIE) && \
+	(defined(CONFIG_BCM4358) || defined(CONFIG_BCM4358_MODULE) || \
+	defined(CONFIG_BCM4354) || defined(CONFIG_BCM4354_MODULE)))
 	struct pcie_link_state	*link_state;	/* ASPM link state. */
 #endif
 

@@ -5,6 +5,17 @@
 obj-y		+= access.o bus.o probe.o host-bridge.o remove.o pci.o \
 			pci-driver.o search.o pci-sysfs.o rom.o setup-res.o \
 			irq.o vpd.o setup-bus.o
+ifdef CONFIG_BCM4358
+ifdef CONFIG_BCMDHD_PCIE
+obj-y		+= aspm-brcm.o
+endif
+endif
+ifdef CONFIG_BCM4354
+ifdef CONFIG_BCMDHD_PCIE
+obj-y		+ aspm-brcm.o
+endif
+endif
+
 obj-$(CONFIG_PROC_FS) += proc.o
 obj-$(CONFIG_SYSFS) += slot.o
 

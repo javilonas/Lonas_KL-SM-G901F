@@ -32,6 +32,7 @@
 #include <linux/sched.h>
 #include <linux/kthread.h>
 #include <linux/freezer.h>
+#include <linux/input.h>
 
 #include <linux/atomic.h>
 
@@ -45,9 +46,38 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Evgeniy Polyakov <zbr@ioremap.net>");
 MODULE_DESCRIPTION("Driver for 1-wire Dallas network protocol.");
 
+#if defined(CONFIG_W1_SLAVE_DS28E15) || defined(CONFIG_W1_SLAVE_DS28EL35)
+static int w1_timeout = 2;
+int w1_max_slave_count = 1;
+int w1_max_slave_ttl = 1;
+
+static struct w1_master *master_dev = NULL;
+
+extern int id, color, model, detect, verification;
+#ifdef CONFIG_W1_SN
+extern char g_sn[14];
+#endif
+
+#undef DS28EL15_WORKAROUND_TEST	// maxim test
+#else
 static int w1_timeout = 10;
 int w1_max_slave_count = 10;
 int w1_max_slave_ttl = 10;
+#endif /* CONFIG_W1_SLAVE_DS28E15 */
+#ifdef CONFIG_W1_WORKQUEUE
+static int fail_count=0;
+
+static void w1_fail_count(int state)
+{
+	if (state)
+		fail_count = 0;
+	else
+		fail_count++;
+
+	if (fail_count > 10000)
+		fail_count = 2;
+}
+#endif
 
 module_param_named(timeout, w1_timeout, int, 0);
 module_param_named(max_slave_count, w1_max_slave_count, int, 0);
@@ -82,6 +112,16 @@ static void w1_slave_release(struct device *dev)
 	struct w1_slave *sl = dev_to_w1_slave(dev);
 
 	dev_dbg(dev, "%s: Releasing %s.\n", __func__, sl->name);
+	printk(KERN_ERR "%s: Releasing %s.\n", __func__, sl->name);
+#if !defined(CONFIG_W1_WORKQUEUE)
+	/* add for sending uevent*/
+	pr_info("%s: uevent send 0\n", __func__);
+	input_report_switch(sl->master->bus_master->input, SW_W1, 0);
+	input_sync(sl->master->bus_master->input);
+	/* end */
+#else
+	schedule_delayed_work(&sl->master->w1_dwork_uevent, HZ * 3);
+#endif
 
 	while (atomic_read(&sl->refcnt)) {
 		dev_dbg(dev, "Waiting for %s to become free: refcnt=%d.\n",
@@ -424,13 +464,14 @@ static int w1_atoreg_num(struct device *dev, const char *buf, size_t count,
 static struct w1_slave *w1_slave_search_device(struct w1_master *dev,
 	struct w1_reg_num *rn)
 {
-	struct w1_slave *sl;
+	struct w1_slave *sl=NULL;
 	list_for_each_entry(sl, &dev->slist, w1_slave_entry) {
+#if !defined(CONFIG_W1_FAST_CHECK)
 		if (sl->reg_num.family == rn->family &&
 				sl->reg_num.id == rn->id &&
-				sl->reg_num.crc == rn->crc) {
+				sl->reg_num.crc == rn->crc)
+#endif
 			return sl;
-		}
 	}
 	return NULL;
 }
@@ -440,7 +481,7 @@ static ssize_t w1_master_attribute_store_add(struct device *dev,
 						const char *buf, size_t count)
 {
 	struct w1_master *md = dev_to_w1_master(dev);
-	struct w1_reg_num rn;
+	struct w1_reg_num rn= {0,};
 	struct w1_slave *sl;
 	ssize_t result = count;
 
@@ -478,7 +519,7 @@ static ssize_t w1_master_attribute_store_remove(struct device *dev,
 						const char *buf, size_t count)
 {
 	struct w1_master *md = dev_to_w1_master(dev);
-	struct w1_reg_num rn;
+	struct w1_reg_num rn= {0,};
 	struct w1_slave *sl;
 	ssize_t result = count;
 
@@ -498,6 +539,56 @@ static ssize_t w1_master_attribute_store_remove(struct device *dev,
 
 	return result;
 }
+
+void w1_master_search(void);
+#if defined(CONFIG_W1_SLAVE_DS28E15) || defined(CONFIG_W1_SLAVE_DS28EL35)
+static ssize_t w1_master_attribute_show_verify_mac(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int result = -1;
+#if defined(CONFIG_SEC_FACTORY) && defined(CONFIG_W1_SLAVE_DS28EL35)
+	struct w1_master *md = dev_to_w1_master(dev);
+
+	pr_info("%s: TEST LOG\n", __func__);
+	mutex_lock(&md->mutex);
+	w1_master_search();
+	mutex_unlock(&md->mutex);
+#endif
+	result = verification;
+
+	return sprintf(buf, "%d\n", result);
+}
+
+static ssize_t w1_master_attribute_show_check_id(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", id);
+}
+
+static ssize_t w1_master_attribute_show_check_color(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", color);
+}
+
+static ssize_t w1_master_attribute_show_check_model(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", model);
+}
+
+static ssize_t w1_master_attribute_show_check_detect(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	detect = w1_read_detect_state();
+	return sprintf(buf, "%d\n", detect);
+}
+
+#ifdef CONFIG_W1_SN
+static ssize_t w1_master_attribute_show_check_sn(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	if (g_sn[0])
+		return snprintf(buf, 15, "%s\n", g_sn);
+	else
+		return snprintf(buf, 1, "%s", "");
+}
+#endif
+#endif
 
 #define W1_MASTER_ATTR_RO(_name, _mode)				\
 	struct device_attribute w1_master_attribute_##_name =	\
@@ -521,6 +612,16 @@ static W1_MASTER_ATTR_RW(search, S_IRUGO | S_IWUSR | S_IWGRP);
 static W1_MASTER_ATTR_RW(pullup, S_IRUGO | S_IWUSR | S_IWGRP);
 static W1_MASTER_ATTR_RW(add, S_IRUGO | S_IWUSR | S_IWGRP);
 static W1_MASTER_ATTR_RW(remove, S_IRUGO | S_IWUSR | S_IWGRP);
+#if defined(CONFIG_W1_SLAVE_DS28E15) || defined(CONFIG_W1_SLAVE_DS28EL35)
+static W1_MASTER_ATTR_RO(verify_mac, S_IRUGO);
+static W1_MASTER_ATTR_RO(check_id, S_IRUGO);
+static W1_MASTER_ATTR_RO(check_color, S_IRUGO);
+static W1_MASTER_ATTR_RO(check_model, S_IRUGO);
+static W1_MASTER_ATTR_RO(check_detect, S_IRUGO);
+#ifdef CONFIG_W1_SN
+static W1_MASTER_ATTR_RO(check_sn, S_IRUGO);
+#endif
+#endif
 
 static struct attribute *w1_master_default_attrs[] = {
 	&w1_master_attribute_name.attr,
@@ -534,11 +635,31 @@ static struct attribute *w1_master_default_attrs[] = {
 	&w1_master_attribute_pullup.attr,
 	&w1_master_attribute_add.attr,
 	&w1_master_attribute_remove.attr,
+#if defined(CONFIG_W1_SLAVE_DS28E15) || defined(CONFIG_W1_SLAVE_DS28EL35)
+	&w1_master_attribute_verify_mac.attr,
+	&w1_master_attribute_check_id.attr,
+	&w1_master_attribute_check_color.attr,
+	&w1_master_attribute_check_model.attr,
+#ifdef CONFIG_W1_SN
+	&w1_master_attribute_check_sn.attr,
+#endif
+#endif
+	NULL
+};
+
+static struct attribute *w1_master_additional_attrs[] = {
+#if defined(CONFIG_W1_SLAVE_DS28E15) || defined(CONFIG_W1_SLAVE_DS28EL35)
+	&w1_master_attribute_check_detect.attr,
+#endif
 	NULL
 };
 
 static struct attribute_group w1_master_defattr_group = {
 	.attrs = w1_master_default_attrs,
+};
+
+static struct attribute_group w1_master_addiattr_group = {
+	.attrs = w1_master_additional_attrs,
 };
 
 int w1_create_master_attributes(struct w1_master *master)
@@ -551,6 +672,17 @@ void w1_destroy_master_attributes(struct w1_master *master)
 	sysfs_remove_group(&master->dev.kobj, &w1_master_defattr_group);
 }
 
+int w1_create_additional_attributes(struct w1_master *master)
+{
+	return sysfs_create_group(&master->dev.kobj, &w1_master_addiattr_group);
+}
+
+void w1_destroy_additional_attributes(struct w1_master *master)
+{
+	sysfs_remove_group(&master->dev.kobj, &w1_master_addiattr_group);
+}
+
+
 static int w1_uevent(struct device *dev, struct kobj_uevent_env *env)
 {
 	struct w1_master *md = NULL;
@@ -562,6 +694,10 @@ static int w1_uevent(struct device *dev, struct kobj_uevent_env *env)
 		md = container_of(dev, struct w1_master, dev);
 		event_owner = "master";
 		name = md->name;
+#if defined(CONFIG_W1_SLAVE_DS28E15) || defined(CONFIG_W1_SLAVE_DS28EL35)
+		master_dev = md; //container_of(dev, struct w1_master, dev);
+		printk(KERN_ERR "%s master_dev name = %s\n", __func__, master_dev->name);
+#endif	/* CONFIG_W1_SLAVE_DS28E15 */
 	} else if (dev->driver == &w1_slave_driver) {
 		sl = container_of(dev, struct w1_slave, dev);
 		event_owner = "slave";
@@ -586,6 +722,19 @@ static int w1_uevent(struct device *dev, struct kobj_uevent_env *env)
 end:
 	return err;
 }
+
+#if defined(CONFIG_W1_SLAVE_DS28E15) || defined(CONFIG_W1_SLAVE_DS28EL35)
+static void w1_search_process(struct w1_master *dev, u8 search_type);
+
+void w1_master_search(void)
+{
+	if (master_dev == NULL)
+		return;
+
+	w1_search_process(master_dev, W1_SEARCH);
+}
+EXPORT_SYMBOL(w1_master_search);
+#endif /* CONFIG_W1_SLAVE_DS28L15 */
 
 static int __w1_attach_slave_device(struct w1_slave *sl)
 {
@@ -706,9 +855,17 @@ static int w1_attach_slave_device(struct w1_master *dev, struct w1_reg_num *rn)
 	sl->ttl = dev->slave_ttl;
 	dev->slave_count++;
 
+	pr_info("%s:uevent send 1\n", __func__);
+	input_report_switch(sl->master->bus_master->input, SW_W1, 1);
+	input_sync(sl->master->bus_master->input);
+
 	memcpy(msg.id.id, rn, sizeof(msg.id));
 	msg.type = W1_SLAVE_ADD;
 	w1_netlink_send(dev, &msg);
+
+#ifdef CONFIG_W1_WORKQUEUE
+		w1_fail_count(1);
+#endif
 
 	return 0;
 }
@@ -718,6 +875,7 @@ void w1_slave_detach(struct w1_slave *sl)
 	struct w1_netlink_msg msg;
 
 	dev_dbg(&sl->dev, "%s: detaching %s [%p].\n", __func__, sl->name, sl);
+	printk(KERN_ERR "%s: detaching %s [%p].\n", __func__, sl->name, sl);
 
 	list_del(&sl->w1_slave_entry);
 
@@ -832,6 +990,7 @@ void w1_slave_found(struct w1_master *dev, u64 rn)
 	if (sl) {
 		set_bit(W1_SLAVE_ACTIVE, (long *)&sl->flags);
 	} else {
+		printk(KERN_ERR "%s : no slave before, id=0x%x\n", __func__, tmp->family);
 		if (rn && tmp->crc == w1_calc_crc8((u8 *)&rn_le, 7))
 			w1_attach_slave_device(dev, tmp);
 	}
@@ -880,6 +1039,9 @@ void w1_search(struct w1_master *dev, u8 search_type, w1_slave_found_callback cb
 		 */
 		mutex_lock(&dev->bus_mutex);
 		if (w1_reset_bus(dev)) {
+#ifdef CONFIG_W1_WORKQUEUE
+			w1_fail_count(0);
+#endif
 			mutex_unlock(&dev->bus_mutex);
 			dev_dbg(&dev->dev, "No devices present on the wire.\n");
 			break;
@@ -979,7 +1141,14 @@ int w1_process(void *data)
 	while (!kthread_should_stop()) {
 		if (dev->search_count) {
 			mutex_lock(&dev->mutex);
+#ifdef DS28EL15_WORKAROUND_TEST
+			w1_write_bit_val(dev, 1);
+			mdelay(2);
+#endif
 			w1_search_process(dev, W1_SEARCH);
+#ifdef DS28EL15_WORKAROUND_TEST
+			w1_write_bit_val(dev, 0);
+#endif
 			mutex_unlock(&dev->mutex);
 		}
 
@@ -1000,6 +1169,36 @@ int w1_process(void *data)
 
 	return 0;
 }
+
+#ifdef CONFIG_W1_WORKQUEUE
+void w1_work(struct work_struct *work)
+{
+	struct w1_master *dev =
+		container_of(work, struct w1_master, w1_dwork.work);
+
+	if (dev->search_count) {
+		mutex_lock(&dev->mutex);
+		w1_search_process(dev, W1_SEARCH);
+		mutex_unlock(&dev->mutex);
+	}
+
+	schedule_delayed_work(&dev->w1_dwork, HZ * 2);
+}
+
+void w1_work_uevent(struct work_struct *work)
+{
+	struct w1_master *dev =
+		container_of(work, struct w1_master, w1_dwork_uevent.work);
+
+	if (fail_count) {
+		/* add for sending uevent*/
+		pr_info("%s: uevent send 0 after fail once\n", __func__);
+		input_report_switch(dev->bus_master->input, SW_W1, 0);
+		input_sync(dev->bus_master->input);
+		/* end */
+	}
+}
+#endif
 
 static int __init w1_init(void)
 {
@@ -1064,5 +1263,5 @@ static void __exit w1_fini(void)
 	bus_unregister(&w1_bus_type);
 }
 
-module_init(w1_init);
+late_initcall(w1_init);
 module_exit(w1_fini);

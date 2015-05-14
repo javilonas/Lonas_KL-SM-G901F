@@ -51,13 +51,15 @@ usb_gadget_get_string (struct usb_gadget_strings *table, int id, u8 *buf)
 		buf [3] = (u8) (table->language >> 8);
 		return 4;
 	}
-	for (s = table->strings; s && s->s; s++)
+	for (s = table->strings; s && s->s; s++) {
 		if (s->id == id)
 			break;
+	}
 
 	/* unrecognized: stall. */
-	if (!s || !s->s)
+	if (!s || !s->s) {
 		return -EINVAL;
+	}
 
 	/* string descriptors have length, tag, then UTF16-LE text */
 	len = min ((size_t) 126, strlen (s->s));

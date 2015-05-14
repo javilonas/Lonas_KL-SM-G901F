@@ -35,6 +35,13 @@
 
 #include <asm/fb.h>
 
+/******************************************/
+/* Customizing Code for DCT(Display Clock Tunning) */
+#ifdef CONFIG_SEC_DISP_CLK_TUNNING
+#include <linux/sec_dct.h>
+extern struct sec_dct_info_t *sec_dct_info;
+#endif
+/******************************************/
 
     /*
      *  Frame buffer device initialization and setup routines
@@ -1122,6 +1129,10 @@ static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (copy_from_user(&cmap, argp, sizeof(cmap)))
 			return -EFAULT;
 		ret = fb_set_user_cmap(&cmap, info);
+		if (ret) {
+			if (info)
+				fb_dealloc_cmap(&info->cmap);
+		}
 		break;
 	case FBIOGETCMAP:
 		if (copy_from_user(&cmap, argp, sizeof(cmap)))
@@ -1187,21 +1198,56 @@ static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (!lock_fb_info(info))
 			return -ENODEV;
 		console_lock();
+#ifdef CONFIG_SEC_DISP_CLK_TUNNING
+		/******************************************/
+		/* Customizing Code for DCT(Display Clock Tunning) */
+		if (unlikely(sec_dct_info) && unlikely(!sec_dct_info->ref_addr))
+			/************************************************/
+			/* (optional)
+			  * This function must be located in appropriate position
+			  * to initialize DCT Data by using reference address
+			  * in accordance with the specification of each BB platform	*/
+			/************************************************/
+			sec_dct_info->ref_addr = (void *)info;
+		/******************************************/
+#endif
+#ifdef CONFIG_SEC_DISP_CLK_TUNNING
+		/******************************************/
+		/* Customizing Code for DCT(Display Clock Tunning) */
+		DCT_LOG("[DCT][%s] call fb_blank (%lu)\n", __func__, arg);
+		if (unlikely(sec_dct_info) && unlikely(sec_dct_info->enabled)
+			&& (arg != FB_BLANK_UNBLANK))
+			/******************************************/
+			/* This function must be located in appropriate SETTING position	
+			  * in accordance with the specification of each BB platform	*/
+			/******************************************/
+			sec_dct_info->applyData();
+		/******************************************/
+#endif	
 		info->flags |= FBINFO_MISC_USEREVENT;
 		ret = fb_blank(info, arg);
 		info->flags &= ~FBINFO_MISC_USEREVENT;
+#ifdef CONFIG_SEC_DISP_CLK_TUNNING
+		/******************************************/
+		/* Customizing Code for DCT(Display Clock Tunning) */
+		if (unlikely(sec_dct_info) && unlikely(sec_dct_info->enabled)
+			&& (arg != FB_BLANK_UNBLANK))
+			/************************************************/
+			/* This function must be located in appropriate END position	
+			  * in accordance with the specification of each BB platform	*/
+			/************************************************/
+			sec_dct_info->finish_applyData();
+		/******************************************/
+#endif
 		console_unlock();
 		unlock_fb_info(info);
 		break;
 	default:
-		if (!lock_fb_info(info))
-			return -ENODEV;
 		fb = info->fbops;
 		if (fb->fb_ioctl)
 			ret = fb->fb_ioctl(info, cmd, arg);
 		else
 			ret = -ENOTTY;
-		unlock_fb_info(info);
 	}
 	return ret;
 }
@@ -1440,6 +1486,7 @@ __releases(&info->lock)
 		goto out;
 	}
 	file->private_data = info;
+	info->file = file;
 	if (info->fbops->fb_open) {
 		res = info->fbops->fb_open(info,1);
 		if (res)
@@ -1464,6 +1511,7 @@ __releases(&info->lock)
 	struct fb_info * const info = file->private_data;
 
 	mutex_lock(&info->lock);
+	info->file = file;
 	if (info->fbops->fb_release)
 		info->fbops->fb_release(info,1);
 	module_put(info->fbops->owner);
@@ -1601,7 +1649,7 @@ static int do_register_framebuffer(struct fb_info *fb_info)
 		return -ENXIO;
 
 	num_registered_fb++;
-	for (i = 0 ; i < FB_MAX; i++)
+	for (i = 0 ; i < FB_MAX-1; i++)
 		if (!registered_fb[i])
 			break;
 	fb_info->node = i;

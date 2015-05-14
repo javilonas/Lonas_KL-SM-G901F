@@ -20,6 +20,8 @@
 #include <linux/gfp.h>
 #include <linux/suspend.h>
 
+#include <trace/events/sched.h>
+
 #include "smpboot.h"
 
 #ifdef CONFIG_SMP
@@ -27,18 +29,23 @@
 static DEFINE_MUTEX(cpu_add_remove_lock);
 
 /*
- * The following two API's must be used when attempting
- * to serialize the updates to cpu_online_mask, cpu_present_mask.
+ * The following two APIs (cpu_maps_update_begin/done) must be used when
+ * attempting to serialize the updates to cpu_online_mask & cpu_present_mask.
+ * The APIs cpu_notifier_register_begin/done() must be used to protect CPU
+ * hotplug callback (un)registration performed using __register_cpu_notifier()
+ * or __unregister_cpu_notifier().
  */
 void cpu_maps_update_begin(void)
 {
 	mutex_lock(&cpu_add_remove_lock);
 }
+EXPORT_SYMBOL(cpu_notifier_register_begin);
 
 void cpu_maps_update_done(void)
 {
 	mutex_unlock(&cpu_add_remove_lock);
 }
+EXPORT_SYMBOL(cpu_notifier_register_done);
 
 static RAW_NOTIFIER_HEAD(cpu_chain);
 
@@ -169,6 +176,11 @@ int __ref register_cpu_notifier(struct notifier_block *nb)
 	return ret;
 }
 
+int __ref __register_cpu_notifier(struct notifier_block *nb)
+{
+	return raw_notifier_chain_register(&cpu_chain, nb);
+}
+
 static int __cpu_notify(unsigned long val, void *v, int nr_to_call,
 			int *nr_calls)
 {
@@ -192,6 +204,7 @@ static void cpu_notify_nofail(unsigned long val, void *v)
 	BUG_ON(cpu_notify(val, v));
 }
 EXPORT_SYMBOL(register_cpu_notifier);
+EXPORT_SYMBOL(__register_cpu_notifier);
 
 void __ref unregister_cpu_notifier(struct notifier_block *nb)
 {
@@ -200,6 +213,12 @@ void __ref unregister_cpu_notifier(struct notifier_block *nb)
 	cpu_maps_update_done();
 }
 EXPORT_SYMBOL(unregister_cpu_notifier);
+
+void __ref __unregister_cpu_notifier(struct notifier_block *nb)
+{
+	raw_notifier_chain_unregister(&cpu_chain, nb);
+}
+EXPORT_SYMBOL(__unregister_cpu_notifier);
 
 /**
  * clear_tasks_mm_cpumask - Safely clear tasks' mm_cpumask for a CPU
@@ -340,6 +359,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
 
 out_release:
 	cpu_hotplug_done();
+	trace_sched_cpu_hotplug(cpu, err, 0);
 	if (!err)
 		cpu_notify_nofail(CPU_POST_DEAD | mod, hcpu);
 	return err;
@@ -415,6 +435,7 @@ out_notify:
 		__cpu_notify(CPU_UP_CANCELED | mod, hcpu, nr_calls, NULL);
 out:
 	cpu_hotplug_done();
+	trace_sched_cpu_hotplug(cpu, ret, 1);
 
 	return ret;
 }
@@ -474,6 +495,76 @@ out:
 	return err;
 }
 EXPORT_SYMBOL_GPL(cpu_up);
+
+#ifdef CONFIG_IRLED_GPIO
+int __cpuinit gpio_ir_cpu_up(void)
+{
+	int err = 0;
+	int cpu = 0;
+
+#ifdef	CONFIG_MEMORY_HOTPLUG
+	int nid;
+	pg_data_t	*pgdat;
+#endif
+
+#ifdef	CONFIG_MEMORY_HOTPLUG
+	/* If you must use this CONFIG_MEMORY_HOTPLUG,
+		this routine is must be tested for gpio ir */
+	for (cpu = 0; cpu < NR_CPUS; cpu++) {
+		if (cpu_possible(cpu)) {
+			nid = cpu_to_node(cpu);
+			if (!node_online(nid)) {
+				err = mem_online_node(nid);
+				if (err)
+					goto out2;
+			}
+
+			pgdat = NODE_DATA(nid);
+			if (!pgdat) {
+				printk(KERN_ERR
+					"Can't online cpu %d due to NULL pgdat\n", cpu);
+				return -ENOMEM;
+			}
+
+			if (pgdat->node_zonelists->_zonerefs->zone == NULL) {
+				mutex_lock(&zonelists_mutex);
+				build_all_zonelists(NULL, NULL);
+				mutex_unlock(&zonelists_mutex);
+			}
+		} else {
+			pr_err("[GPIO_IR][%s] cpu %d is not possible\n", __func__, cpu);
+		}
+	}
+#endif
+
+	cpu_maps_update_begin();
+	for (cpu = 0; cpu < NR_CPUS; cpu++) {
+		if (cpu_possible(cpu)) {
+			if (!cpu_online(cpu)) {
+				err = _cpu_up(cpu, 0);
+				if (err) {
+					pr_err("[GPIO_IR][%s] Error (%d) online core %d\n", 
+						__func__, err, cpu);
+					goto out;
+				}
+			}
+		} else {
+			pr_err("[GPIO_IR][%s] cpu %d is not possible\n", __func__, cpu);
+		}
+	}
+
+	cpu_hotplug_disabled = 1;
+
+out:
+	cpu_maps_update_done();
+#ifdef	CONFIG_MEMORY_HOTPLUG
+out2:
+#endif
+	return err;
+}
+#endif
+
+
 
 #ifdef CONFIG_PM_SLEEP_SMP
 static cpumask_var_t frozen_cpus;
@@ -698,10 +789,12 @@ void set_cpu_present(unsigned int cpu, bool present)
 
 void set_cpu_online(unsigned int cpu, bool online)
 {
-	if (online)
+	if (online) {
 		cpumask_set_cpu(cpu, to_cpumask(cpu_online_bits));
-	else
+		cpumask_set_cpu(cpu, to_cpumask(cpu_active_bits));
+	} else {
 		cpumask_clear_cpu(cpu, to_cpumask(cpu_online_bits));
+	}
 }
 
 void set_cpu_active(unsigned int cpu, bool active)
@@ -726,3 +819,23 @@ void init_cpu_online(const struct cpumask *src)
 {
 	cpumask_copy(to_cpumask(cpu_online_bits), src);
 }
+
+static ATOMIC_NOTIFIER_HEAD(idle_notifier);
+
+void idle_notifier_register(struct notifier_block *n)
+{
+	atomic_notifier_chain_register(&idle_notifier, n);
+}
+EXPORT_SYMBOL_GPL(idle_notifier_register);
+
+void idle_notifier_unregister(struct notifier_block *n)
+{
+	atomic_notifier_chain_unregister(&idle_notifier, n);
+}
+EXPORT_SYMBOL_GPL(idle_notifier_unregister);
+
+void idle_notifier_call_chain(unsigned long val)
+{
+	atomic_notifier_call_chain(&idle_notifier, val, NULL);
+}
+EXPORT_SYMBOL_GPL(idle_notifier_call_chain);

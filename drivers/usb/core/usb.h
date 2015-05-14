@@ -102,6 +102,7 @@ extern int usb_runtime_suspend(struct device *dev);
 extern int usb_runtime_resume(struct device *dev);
 extern int usb_runtime_idle(struct device *dev);
 extern int usb_set_usb2_hardware_lpm(struct usb_device *udev, int enable);
+extern int get_intf_with_pwr_usage_count(struct usb_device *udev);
 
 #else
 
@@ -120,6 +121,15 @@ static inline int usb_set_usb2_hardware_lpm(struct usb_device *udev, int enable)
 {
 	return 0;
 }
+
+static inline int get_intf_with_pwr_usage_count(struct usb_device *udev)
+{
+	return -ENXIO;
+}
+#endif
+
+#ifdef CONFIG_USB_OTG
+extern void usb_hnp_polling_work(struct work_struct *work);
 #endif
 
 extern struct bus_type usb_bus_type;
@@ -177,6 +187,7 @@ extern void usb_devio_cleanup(void);
 /* internal notify stuff */
 extern void usb_notify_add_device(struct usb_device *udev);
 extern void usb_notify_remove_device(struct usb_device *udev);
+extern void usb_notify_config_device(struct usb_device *udev);
 extern void usb_notify_add_bus(struct usb_bus *ubus);
 extern void usb_notify_remove_bus(struct usb_bus *ubus);
 extern enum usb_port_connect_type

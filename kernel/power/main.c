@@ -16,6 +16,18 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
+//#define CONFIG_SUSPEND_HELPER //etinum.test
+#define SUSPEND_WAKEUP_BOOST
+
+#ifdef SUSPEND_WAKEUP_BOOST
+#include <linux/sched.h>
+#endif
+
+#ifdef CONFIG_CPU_FREQ_LIMIT_USERSPACE
+#include <linux/cpufreq.h>
+#include <linux/cpufreq_limit.h>
+#endif
+
 #include "power.h"
 
 DEFINE_MUTEX(pm_mutex);
@@ -335,15 +347,38 @@ static suspend_state_t decode_state(const char *buf, size_t n)
 	return PM_SUSPEND_ON;
 }
 
-static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
-			   const char *buf, size_t n)
+
+
+#ifdef CONFIG_SUSPEND_HELPER
+static struct workqueue_struct *suspend_helper_wq;
+struct state_store_params {
+	const char *buf;
+	size_t n;
+};
+
+struct suspend_helper_data {
+	struct work_struct work;
+	struct completion done;
+	struct state_store_params params;
+	int result;
+};
+struct suspend_helper_data *suspend_helper_data;
+
+static void suspend_helper(struct work_struct *work)
 {
+	struct suspend_helper_data *data = (struct suspend_helper_data *)
+		container_of(work, struct suspend_helper_data, work);
+	const char *buf = data->params.buf;
+	size_t n = data->params.n;
 	suspend_state_t state;
-	int error;
+	int error = 0;
+
+	pr_info("[suspend helper] %s: start!\n", __func__);
 
 	error = pm_autosleep_lock();
-	if (error)
-		return error;
+	if (error) {
+		goto out_nolock;
+	}
 
 	if (pm_autosleep_state() > PM_SUSPEND_ON) {
 		error = -EBUSY;
@@ -358,6 +393,136 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
 	else
 		error = -EINVAL;
 
+out:
+	pm_autosleep_unlock();
+
+out_nolock:
+	// set result and notify completion
+	data->result = error;
+	complete(&data->done);
+
+	pr_info("[suspend helper] %s: result = %d\n", __func__, error);
+}
+
+static ssize_t state_store_helper(struct kobject *kobj, struct kobj_attribute *attr,
+			   const char *buf, size_t n)
+{
+	int error;
+	int freezable = 0;
+
+	// we don't need to freeze. so tell the freezer
+	if (!freezer_should_skip(current)) {
+		freezable = 1;
+		freezer_do_not_count();
+		pr_info("[suspend helper] %s: freezer should skip me (%s:%d)\n",
+				__func__, current->comm, current->pid);
+	}
+
+	suspend_helper_data->params.buf = buf;
+	suspend_helper_data->params.n = n;
+	INIT_COMPLETION(suspend_helper_data->done);
+
+	// use kworker for suspend resume
+	queue_work(suspend_helper_wq, &suspend_helper_data->work);
+
+	// wait for suspend/resume work to be complete
+	wait_for_completion(&suspend_helper_data->done);
+
+	if (freezable) {
+		// set ourself as freezable
+		freezer_count();
+	}
+
+	error = suspend_helper_data->result;
+	pr_info("[suspend helper] %s: suspend_helper returned %d\n", __func__, error);
+
+	return error ? error : n;
+}
+
+static int suspend_helper_init(void)
+{
+	int ret = 0;
+
+	suspend_helper_wq = alloc_ordered_workqueue("suspend_helper", 0);
+	if (!suspend_helper_wq)
+		return -ENOMEM;
+
+	suspend_helper_data = kzalloc(sizeof(struct suspend_helper_data), GFP_KERNEL);
+	if (!suspend_helper_data) {
+		ret = -ENOMEM;
+		goto out_destroy_wq;
+	}
+
+	INIT_WORK(&suspend_helper_data->work, suspend_helper);
+	init_completion(&suspend_helper_data->done);
+
+	pr_info("[suspend helper] %s: init done\n", __func__);
+
+	return 0;
+out_destroy_wq:
+	destroy_workqueue(suspend_helper_wq);
+
+	return ret;
+}
+#endif
+
+#ifdef SUSPEND_WAKEUP_BOOST
+static void pr_sched_state(const char *msg)
+{
+	pr_debug("[sched state] %s: (%s:%d) %pS policy=%d, prio=%d, static_prio=%d, normal_prio=%d, rt_priority=%d\n",
+		msg, current->comm, current->pid,
+		current->sched_class, current->policy, 
+		current->prio, current->static_prio, current->normal_prio, current->rt_priority);
+}
+#endif
+
+static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
+			   const char *buf, size_t n)
+{
+	suspend_state_t state;
+	int error;
+#ifdef SUSPEND_WAKEUP_BOOST
+	int orig_policy = current->policy;
+	int orig_nice = task_nice(current);
+	struct sched_param param = { .sched_priority = 1 };
+#endif
+
+#ifdef CONFIG_SUSPEND_HELPER
+	if (suspend_helper_data) {
+		pr_info("[suspend helper] %s: Let our helper do the real work!\n", __func__);
+		return state_store_helper(kobj, attr, buf, n);
+	}
+	pr_info("[suspend helper] %s: helper data not avaialbe.. Fall back to the legacy code..\n", __func__);
+#endif
+
+	error = pm_autosleep_lock();
+	if (error)
+		return error;
+
+	if (pm_autosleep_state() > PM_SUSPEND_ON) {
+		error = -EBUSY;
+		goto out;
+	}
+
+#ifdef SUSPEND_WAKEUP_BOOST
+	pr_sched_state("before boost");
+	sched_setscheduler_nocheck(current, SCHED_FIFO, &param);
+	pr_sched_state("after boost");
+#endif
+	state = decode_state(buf, n);
+	if (state < PM_SUSPEND_MAX)
+		error = pm_suspend(state);
+	else if (state == PM_SUSPEND_MAX)
+		error = hibernate();
+	else
+		error = -EINVAL;
+#ifdef SUSPEND_WAKEUP_BOOST
+	pr_sched_state("before restore");
+	param.sched_priority = 0;
+	sched_setscheduler_nocheck(current, orig_policy, &param);
+	set_user_nice(current, orig_nice);
+	pr_sched_state("after restore");
+#endif
  out:
 	pm_autosleep_unlock();
 	return error ? error : n;
@@ -511,6 +676,174 @@ power_attr(wake_unlock);
 #endif /* CONFIG_PM_WAKELOCKS */
 #endif /* CONFIG_PM_SLEEP */
 
+#ifdef CONFIG_CPU_FREQ_LIMIT_USERSPACE
+static int cpufreq_max_limit_val = -1;
+static int cpufreq_min_limit_val = -1;
+struct cpufreq_limit_handle *cpufreq_max_hd;
+struct cpufreq_limit_handle *cpufreq_min_hd;
+DEFINE_MUTEX(cpufreq_limit_mutex);
+
+static ssize_t cpufreq_table_show(struct kobject *kobj,
+			struct kobj_attribute *attr, char *buf)
+{
+	ssize_t len = 0;
+	int i, count = 0;
+	unsigned int freq;
+
+	struct cpufreq_frequency_table *table;
+
+	table = cpufreq_frequency_get_table(0);
+	if (table == NULL)
+		return 0;
+
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
+		count = i;
+
+	for (i = count; i >= 0; i--) {
+		freq = table[i].frequency;
+
+		if (freq == CPUFREQ_ENTRY_INVALID)
+			continue;
+
+		len += sprintf(buf + len, "%u ", freq);
+	}
+
+	len--;
+	len += sprintf(buf + len, "\n");
+
+	return len;
+}
+
+static ssize_t cpufreq_table_store(struct kobject *kobj,
+				struct kobj_attribute *attr,
+				const char *buf, size_t n)
+{
+	pr_err("%s: cpufreq_table is read-only\n", __func__);
+	return -EINVAL;
+}
+
+static ssize_t cpufreq_max_limit_show(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	return sprintf(buf, "%d\n", cpufreq_max_limit_val);
+}
+
+static ssize_t cpufreq_max_limit_store(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					const char *buf, size_t n)
+{
+	int val;
+	ssize_t ret = -EINVAL;
+
+	if (sscanf(buf, "%d", &val) != 1) {
+		pr_err("%s: Invalid cpufreq format\n", __func__);
+		goto out;
+	}
+
+	mutex_lock(&cpufreq_limit_mutex);
+	if (cpufreq_max_hd) {
+		cpufreq_limit_put(cpufreq_max_hd);
+		cpufreq_max_hd = NULL;
+	}
+
+	if (val != -1) {
+		cpufreq_max_hd = cpufreq_limit_max_freq(val, "user lock(max)");
+		if (IS_ERR(cpufreq_max_hd)) {
+			pr_err("%s: fail to get the handle\n", __func__);
+			cpufreq_max_hd = NULL;
+		}
+	}
+
+	cpufreq_max_hd ?
+		(cpufreq_max_limit_val = val) : (cpufreq_max_limit_val = -1);
+
+	mutex_unlock(&cpufreq_limit_mutex);
+	ret = n;
+out:
+	return ret;
+}
+
+static ssize_t cpufreq_min_limit_show(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					char *buf)
+{
+	return sprintf(buf, "%d\n", cpufreq_min_limit_val);
+}
+
+static ssize_t cpufreq_min_limit_store(struct kobject *kobj,
+					struct kobj_attribute *attr,
+					const char *buf, size_t n)
+{
+	int val;
+	ssize_t ret = -EINVAL;
+
+	if (sscanf(buf, "%d", &val) != 1) {
+		pr_err("%s: Invalid cpufreq format\n", __func__);
+		goto out;
+	}
+
+	mutex_lock(&cpufreq_limit_mutex);
+	if (cpufreq_min_hd) {
+		cpufreq_limit_put(cpufreq_min_hd);
+		cpufreq_min_hd = NULL;
+	}
+
+	if (val != -1) {
+		cpufreq_min_hd = cpufreq_limit_min_freq(val, "user lock(min)");
+		if (IS_ERR(cpufreq_min_hd)) {
+			pr_err("%s: fail to get the handle\n", __func__);
+			cpufreq_min_hd = NULL;
+		}
+	}
+
+	cpufreq_min_hd ?
+		(cpufreq_min_limit_val = val) : (cpufreq_min_limit_val = -1);
+
+	mutex_unlock(&cpufreq_limit_mutex);
+	ret = n;
+out:
+	return ret;
+}
+
+power_attr(cpufreq_table);
+power_attr(cpufreq_max_limit);
+power_attr(cpufreq_min_limit);
+
+struct cpufreq_limit_handle *cpufreq_min_touch;
+
+
+int set_freq_limit(unsigned long id, unsigned int freq)
+{
+	ssize_t ret = -EINVAL;
+
+	mutex_lock(&cpufreq_limit_mutex);
+
+	if (cpufreq_min_touch) {
+		cpufreq_limit_put(cpufreq_min_touch);
+		cpufreq_min_touch = NULL;
+	}
+
+	pr_debug("%s: id=%d freq=%d\n", __func__, (int)id, freq);
+
+	/* min lock */
+	if (id & DVFS_TOUCH_ID) {
+		if (freq != -1) {
+			cpufreq_min_touch = cpufreq_limit_min_freq(freq, "touch min");
+			if (IS_ERR(cpufreq_min_touch)) {
+				pr_err("%s: fail to get the handle\n", __func__);
+				goto out;
+			}
+		}
+	}
+	ret = 0;
+out:
+	mutex_unlock(&cpufreq_limit_mutex);
+	return ret;
+}
+
+#endif
+
 #ifdef CONFIG_PM_TRACE
 int pm_trace_enabled;
 
@@ -577,6 +910,34 @@ power_attr(pm_freeze_timeout);
 
 #endif	/* CONFIG_FREEZER*/
 
+#ifdef CONFIG_SEC_PM
+extern int qpnp_set_resin_wk_int(int en);
+static int volkey_wakeup = 1;
+static ssize_t volkey_wakeup_show(struct kobject *kobj,
+				  struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", volkey_wakeup);
+}
+
+static ssize_t volkey_wakeup_store(struct kobject *kobj,
+				   struct kobj_attribute *attr,
+				   const char *buf, size_t n)
+{
+	int val;
+
+	if (sscanf(buf, "%d", &val) != 1)
+		return -EINVAL;
+
+	volkey_wakeup = val;
+	qpnp_set_resin_wk_int(volkey_wakeup);
+
+	return n;
+
+}
+
+power_attr(volkey_wakeup);
+#endif /* CONFIG_SEC_PM */
+
 static struct attribute * g[] = {
 	&state_attr.attr,
 #ifdef CONFIG_PM_TRACE
@@ -602,6 +963,14 @@ static struct attribute * g[] = {
 #endif
 #ifdef CONFIG_FREEZER
 	&pm_freeze_timeout_attr.attr,
+#endif
+#ifdef CONFIG_CPU_FREQ_LIMIT_USERSPACE
+	&cpufreq_table_attr.attr,
+	&cpufreq_max_limit_attr.attr,
+	&cpufreq_min_limit_attr.attr,
+#endif
+#ifdef CONFIG_SEC_PM
+	&volkey_wakeup_attr.attr,
 #endif
 	NULL,
 };
@@ -638,6 +1007,9 @@ static int __init pm_init(void)
 	if (error)
 		return error;
 	pm_print_times_init();
+#ifdef CONFIG_SUSPEND_HELPER
+	suspend_helper_init();
+#endif
 	return pm_autosleep_init();
 }
 

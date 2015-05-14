@@ -2998,6 +2998,9 @@ static void cfq_choose_cfqg(struct cfq_data *cfqd)
 {
 	struct cfq_group *cfqg = cfq_get_next_cfqg(cfqd);
 
+	if (!cfqg)
+		return;
+
 	cfqd->serving_group = cfqg;
 
 	/* Restore the workload type data */
@@ -4083,8 +4086,10 @@ static void cfq_completed_request(struct request_queue *q, struct request *rq)
 		}
 	}
 
+	/* Disable uplug_work at blk_end_request
 	if (!cfqd->rq_in_driver)
 		cfq_schedule_dispatch(cfqd);
+	*/
 }
 
 static inline int __cfq_may_queue(struct cfq_queue *cfqq)

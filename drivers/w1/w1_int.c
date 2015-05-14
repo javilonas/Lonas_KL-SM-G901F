@@ -32,6 +32,11 @@
 #include "w1_netlink.h"
 #include "w1_int.h"
 
+
+#ifdef CONFIG_W1_WORKQUEUE
+struct w1_master *w1_gdev;
+#endif
+
 static int w1_search_count = -1; /* Default is continual scan */
 module_param_named(search_count, w1_search_count, int, 0);
 
@@ -158,20 +163,38 @@ int w1_add_master_device(struct w1_bus_master *master)
 		goto err_out_free_dev;
 	}
 
+	if (master->irq_mode) {
+		retval =  w1_create_additional_attributes(dev);
+		if (retval) {
+			mutex_unlock(&w1_mlock);
+			goto err_out_free_dev;
+		}
+	}
+
 	memcpy(dev->bus_master, master, sizeof(struct w1_bus_master));
 
 	dev->initialized = 1;
 
-	dev->thread = kthread_run(&w1_process, dev, "%s", dev->name);
-	if (IS_ERR(dev->thread)) {
-		retval = PTR_ERR(dev->thread);
-		dev_err(&dev->dev,
-			 "Failed to create new kernel thread. err=%d\n",
-			 retval);
-		mutex_unlock(&w1_mlock);
-		goto err_out_rm_attr;
-	}
+	if (!master->irq_mode) {
+#ifdef CONFIG_W1_WORKQUEUE
+		pr_info("%s : W1 workqueue will start\n", __func__);
+		INIT_DELAYED_WORK(&dev->w1_dwork, w1_work);
+		INIT_DELAYED_WORK(&dev->w1_dwork_uevent, w1_work_uevent);
 
+		schedule_delayed_work(&dev->w1_dwork, HZ / 20);
+#else
+		pr_info("%s : W1 thread will start\n", __func__);
+		dev->thread = kthread_run(&w1_process, dev, "%s", dev->name);
+		if (IS_ERR(dev->thread)) {
+			retval = PTR_ERR(dev->thread);
+			dev_err(&dev->dev,
+				 "Failed to create new kernel thread. err=%d\n",
+				 retval);
+			mutex_unlock(&w1_mlock);
+			goto err_out_rm_attr;
+		}
+#endif
+	}
 	list_add(&dev->w1_master_entry, &w1_masters);
 	mutex_unlock(&w1_mlock);
 
@@ -180,14 +203,22 @@ int w1_add_master_device(struct w1_bus_master *master)
 	msg.type = W1_MASTER_ADD;
 	w1_netlink_send(dev, &msg);
 
+#ifdef CONFIG_W1_WORKQUEUE
+	w1_gdev = dev;
+#endif
+
 	return 0;
 
 #if 0 /* Thread cleanup code, not required currently. */
 err_out_kill_thread:
 	kthread_stop(dev->thread);
 #endif
+#ifndef CONFIG_W1_WORKQUEUE
 err_out_rm_attr:
+	if (master->irq_mode)
+		w1_destroy_additional_attributes(dev);
 	w1_destroy_master_attributes(dev);
+#endif
 err_out_free_dev:
 	w1_free_dev(dev);
 

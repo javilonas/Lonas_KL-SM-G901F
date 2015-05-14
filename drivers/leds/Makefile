@@ -20,6 +20,7 @@ obj-$(CONFIG_LEDS_COBALT_QUBE)		+= leds-cobalt-qube.o
 obj-$(CONFIG_LEDS_COBALT_RAQ)		+= leds-cobalt-raq.o
 obj-$(CONFIG_LEDS_SUNFIRE)		+= leds-sunfire.o
 obj-$(CONFIG_LEDS_PCA9532)		+= leds-pca9532.o
+obj-$(CONFIG_LEDS_QPNP)			+= leds-qpnp.o
 obj-$(CONFIG_LEDS_GPIO_REGISTER)	+= leds-gpio-register.o
 obj-$(CONFIG_LEDS_GPIO)			+= leds-gpio.o
 obj-$(CONFIG_LEDS_LP3944)		+= leds-lp3944.o
@@ -53,6 +54,14 @@ obj-$(CONFIG_LEDS_RENESAS_TPU)		+= leds-renesas-tpu.o
 obj-$(CONFIG_LEDS_MAX8997)		+= leds-max8997.o
 obj-$(CONFIG_LEDS_LM355x)		+= leds-lm355x.o
 obj-$(CONFIG_LEDS_BLINKM)		+= leds-blinkm.o
+obj-$(CONFIG_LEDS_MSM_GPIO_FLASH)	+= leds-msm-gpio-flash.o
+obj-$(CONFIG_LEDS_MAX77828_RGB)		+= leds-max77828-rgb.o
+obj-$(CONFIG_LEDS_MAX77843_RGB)		+= leds-max77843-rgb.o
+obj-$(CONFIG_LEDS_MAX77803)		+= leds-max77803.o
+obj-$(CONFIG_LEDS_MAX77804K)		+= leds-max77804k.o
+obj-$(CONFIG_LEDS_MAX77828)		+= leds-max77828.o
+obj-$(CONFIG_LEDS_AN30259A)             += leds-an30259a.o
+obj-$(CONFIG_LEDS_MIC2873)		+= leds-mic2873.o
 
 # LED SPI Drivers
 obj-$(CONFIG_LEDS_DAC124S085)		+= leds-dac124s085.o

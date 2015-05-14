@@ -27,3 +27,7 @@ config DVB_DYNAMIC_MINORS
 	  will be required to manage the device nodes.
 
 	  If you are unsure about this, say N here.
+
+config JPN_DEMUX_MOD
+	bool "Japan demux modificatiob for PCR"
+	default n

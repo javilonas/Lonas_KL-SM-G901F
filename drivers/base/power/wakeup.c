@@ -875,6 +875,62 @@ static int wakeup_sources_stats_show(struct seq_file *m, void *unused)
 	return 0;
 }
 
+#ifdef CONFIG_SEC_PM_DEBUG
+static int print_wakeup_source_active(
+				     struct wakeup_source *ws)
+{
+	unsigned long flags;
+	ktime_t total_time;
+	unsigned long active_count;
+	ktime_t active_time;
+	ktime_t prevent_sleep_time;
+	int ret;
+
+	spin_lock_irqsave(&ws->lock, flags);
+
+	total_time = ws->total_time;
+	prevent_sleep_time = ws->prevent_sleep_time;
+	active_count = ws->active_count;
+	if (ws->active) {
+		ktime_t now = ktime_get();
+
+		active_time = ktime_sub(now, ws->last_time);
+		total_time = ktime_add(total_time, active_time);
+
+		if (ws->autosleep_enabled)
+			prevent_sleep_time = ktime_add(prevent_sleep_time,
+				ktime_sub(now, ws->start_prevent_time));
+	} else {
+		active_time = ktime_set(0, 0);
+	}
+
+	ret = pr_info("<%s>\tCount(%lu) Time(%lld/%lld) Prevent(%lld)\n",
+			ws->name, active_count,
+			ktime_to_ms(active_time), ktime_to_ms(total_time),
+			ktime_to_ms(prevent_sleep_time));
+
+	spin_unlock_irqrestore(&ws->lock, flags);
+
+	return ret;
+}
+
+int wakeup_sources_stats_active(void)
+{
+	struct wakeup_source *ws;
+
+	pr_info("Active wake lock:\n");
+
+	rcu_read_lock();
+	list_for_each_entry_rcu(ws, &wakeup_sources, entry)
+		if (ws->active)
+			print_wakeup_source_active(ws);
+	rcu_read_unlock();
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(wakeup_sources_stats_active);
+#endif
+
 static int wakeup_sources_stats_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, wakeup_sources_stats_show, NULL);
@@ -896,3 +952,44 @@ static int __init wakeup_sources_debugfs_init(void)
 }
 
 postcore_initcall(wakeup_sources_debugfs_init);
+
+
+int active_wakelock_stats_show(struct seq_file *m, void *unused)
+{
+	struct wakeup_source *ws;
+	unsigned long flags;
+
+	rcu_read_lock();
+	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
+		spin_lock_irqsave(&ws->lock, flags);
+		if (ws->active)
+		     seq_printf(m, "~~%s", ws->name);
+		spin_unlock_irqrestore(&ws->lock, flags);
+	}
+	rcu_read_unlock();
+
+	return 0;
+
+}
+static int active_wakelock_stats_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, active_wakelock_stats_show, NULL);
+}
+
+static const struct file_operations active_wakelock_stats_fops = {
+	.owner = THIS_MODULE,
+	.open = active_wakelock_stats_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int __init active_wakelock_debugfs_init(void)
+{
+	debugfs_create_file("active_wakelocks",
+			S_IRUGO, NULL, NULL, &active_wakelock_stats_fops);
+	return 0;
+}
+
+postcore_initcall(active_wakelock_debugfs_init);
+

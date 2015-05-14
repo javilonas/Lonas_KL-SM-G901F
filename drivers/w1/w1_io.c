@@ -135,6 +135,23 @@ static void w1_post_write(struct w1_master *dev)
 	}
 }
 
+#undef DS28EL15_WORKAROUND_TEST
+#ifdef DS28EL15_WORKAROUND_TEST	// for maxim
+/**
+ * Write bit value of w1 bus line.
+ *
+ * @param dev     the master device
+ * @param bit     the bit to write
+ */
+void w1_write_bit_val(struct w1_master *dev, u8 bit)
+{
+	if (dev->bus_master->write_bit) {
+		dev->bus_master->write_bit(dev->bus_master->data, bit);
+	}
+}
+EXPORT_SYMBOL_GPL(w1_write_bit_val);
+#endif
+
 /**
  * Writes 8 bits.
  *
@@ -395,6 +412,8 @@ int w1_reset_select_slave(struct w1_slave *sl)
 	if (w1_reset_bus(sl->master))
 		return -1;
 
+	w1_write_8(sl->master, W1_SKIP_ROM);
+#if 0
 	if (sl->master->slave_count == 1)
 		w1_write_8(sl->master, W1_SKIP_ROM);
 	else {
@@ -404,6 +423,7 @@ int w1_reset_select_slave(struct w1_slave *sl)
 		memcpy(&match[1], &rn, 8);
 		w1_write_block(sl->master, match, 9);
 	}
+#endif
 	return 0;
 }
 EXPORT_SYMBOL_GPL(w1_reset_select_slave);

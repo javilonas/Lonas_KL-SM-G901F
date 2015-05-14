@@ -287,6 +287,26 @@ config LEDS_PCA9633
 	  This option enables support for LEDs connected to the PCA9633
 	  LED driver chip accessed via the I2C bus.
 
+config LEDS_QPNP
+	tristate "Support for QPNP LEDs"
+	depends on SPMI && OF_SPMI
+	help
+	  This driver supports the leds functionality of Qualcomm PNP PMIC.  It
+	  includes RGB Leds, WLED and Flash Led.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called leds-qpnp.
+
+config LEDS_MSM_GPIO_FLASH
+	tristate "Support for GPIO Flash LEDs"
+	depends on GPIO_MSM_V3
+	help
+	  This driver supports the leds functionality of GPIO Flash LED. It
+	  includes flash mode and torch mode.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called leds-gpio-flash.
+
 config LEDS_WM831X_STATUS
 	tristate "LED support for status LEDs on WM831x PMICs"
 	depends on LEDS_CLASS
@@ -478,6 +498,68 @@ config LEDS_BLINKM
 	help
 	  This option enables support for the BlinkM RGB LED connected
 	  through I2C. Say Y to enable support for the BlinkM LED.
+
+config LEDS_MAX77828_RGB
+	tristate "Led max77828 rgb"
+	depends on MFD_MAX77828 && LEDS_CLASS && I2C
+	help
+	  If you say yes here you will get support for
+	  for the MAX77828 RGB led chip.
+
+config LEDS_MAX77843_RGB
+	tristate "Led max77843 rgb"
+	depends on MFD_MAX77843 && LEDS_CLASS && I2C
+	help
+	  If you say yes here you will get support for
+	  for the MAX77843 RGB led chip.
+
+config LEDS_MAX77803
+	bool "LED support for the MAX77803"
+	depends on LEDS_CLASS
+	depends on MFD_MAX77803
+	default n
+	help
+	  This option enables support for the LEDs
+
+config LEDS_MAX77804K
+	bool "LED support for the MAX77804K"
+	depends on LEDS_CLASS
+	depends on MFD_MAX77804K
+	default n
+	help
+	  This option enables support for the LEDs
+	  Now camera_class is exceptioned
+	  by sanghoon.lee.
+
+config LEDS_MAX77828
+	bool "LED support for the MAX77828"
+	depends on LEDS_CLASS
+	depends on MFD_MAX77828
+	default n
+	help
+	  This option enables support for the LEDs
+
+config LEDS_MIC2873
+	bool "LED support for the MIC2873"
+	depends on LEDS_CLASS
+	default n
+	help
+	  This option enables support for the LEDs
+
+config DEBUG_FLASH
+	bool "for LED driver debugging"
+	depends on LEDS_CLASS
+	default n
+	help
+	  This option enables support for the LED debugging
+
+config LEDS_AN30259A
+	tristate "LED support for AN30259A I2C chip"
+	depends on LEDS_CLASS
+	depends on I2C
+	help
+	  This option enables support for LEDs connected to the AN30259A
+	  LED driver chip accessed via the I2C bus.
 
 comment "LED Triggers"
 source "drivers/leds/trigger/Kconfig"

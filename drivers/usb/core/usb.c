@@ -444,8 +444,11 @@ struct usb_device *usb_alloc_dev(struct usb_device *parent,
 	INIT_LIST_HEAD(&dev->filelist);
 
 #ifdef	CONFIG_PM
-	pm_runtime_set_autosuspend_delay(&dev->dev,
-			usb_autosuspend_delay * 1000);
+	if (usb_hcd->driver->set_autosuspend_delay)
+		usb_hcd->driver->set_autosuspend_delay(dev);
+	else
+		pm_runtime_set_autosuspend_delay(&dev->dev,
+				usb_autosuspend_delay * 1000);
 	dev->connect_time = jiffies;
 	dev->active_duration = -jiffies;
 #endif
@@ -993,12 +996,25 @@ static void usb_debugfs_cleanup(void)
 	debugfs_remove(usb_debug_root);
 }
 
+#ifdef CONFIG_SAMSUNG_LPM_MODE
+extern int poweroff_charging;
+#endif
+
 /*
  * Init
  */
 static int __init usb_init(void)
 {
 	int retval;
+
+#ifdef CONFIG_SAMSUNG_LPM_MODE
+	if(poweroff_charging)
+	{
+		nousb = true;
+		return 0;
+	}
+#endif
+
 	if (nousb) {
 		pr_info("%s: USB support disabled\n", usbcore_name);
 		return 0;

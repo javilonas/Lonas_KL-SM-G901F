@@ -33,6 +33,9 @@
 #include <linux/statfs.h>
 #include <linux/magic.h>
 #include "ecryptfs_kernel.h"
+#ifdef CONFIG_SDP
+#include "ecryptfs_dek.h"
+#endif
 
 struct kmem_cache *ecryptfs_inode_info_cache;
 
@@ -60,6 +63,11 @@ static struct inode *ecryptfs_alloc_inode(struct super_block *sb)
 	mutex_init(&inode_info->lower_file_mutex);
 	atomic_set(&inode_info->lower_file_count, 0);
 	inode_info->lower_file = NULL;
+#ifdef CONFIG_SDP
+	// get userid from super block
+	inode_info->userid = ecryptfs_super_block_get_userid(sb);
+	inode_info->crypt_stat.userid = inode_info->userid;
+#endif
 	inode = &inode_info->vfs_inode;
 out:
 	return inode;
@@ -159,6 +167,14 @@ static int ecryptfs_show_options(struct seq_file *m, struct dentry *root)
 		else
 			seq_printf(m, ",ecryptfs_sig=%s", walker->sig);
 	}
+#ifdef CONFIG_SDP
+	if(ecryptfs_is_valid_userid(mount_crypt_stat->userid)){
+		seq_printf(m, ",userid=%d", mount_crypt_stat->userid);
+	}
+	if (mount_crypt_stat->flags & ECRYPTFS_MOUNT_SDP_ENABLED){
+		seq_printf(m, ",sdp_enabled");
+	}
+#endif
 	mutex_unlock(&mount_crypt_stat->global_auth_tok_list_mutex);
 
 	seq_printf(m, ",ecryptfs_cipher=%s",
@@ -167,6 +183,14 @@ static int ecryptfs_show_options(struct seq_file *m, struct dentry *root)
 	if (mount_crypt_stat->global_default_cipher_key_size)
 		seq_printf(m, ",ecryptfs_key_bytes=%zd",
 			   mount_crypt_stat->global_default_cipher_key_size);
+#ifdef CONFIG_WTL_ENCRYPTION_FILTER
+	if (mount_crypt_stat->flags & ECRYPTFS_ENABLE_FILTERING)
+		seq_printf(m, ",ecryptfs_enable_filtering");
+#endif
+#if defined(CONFIG_CRYPTO_FIPS) && !defined(CONFIG_FORCE_DISABLE_FIPS)
+	if (mount_crypt_stat->flags & ECRYPTFS_ENABLE_CC)
+		seq_printf(m, ",ecryptfs_enable_cc");
+#endif
 	if (mount_crypt_stat->flags & ECRYPTFS_PLAINTEXT_PASSTHROUGH_ENABLED)
 		seq_printf(m, ",ecryptfs_passthrough");
 	if (mount_crypt_stat->flags & ECRYPTFS_XATTR_METADATA_ENABLED)
@@ -187,5 +211,5 @@ const struct super_operations ecryptfs_sops = {
 	.statfs = ecryptfs_statfs,
 	.remount_fs = NULL,
 	.evict_inode = ecryptfs_evict_inode,
-	.show_options = ecryptfs_show_options
+	.show_options = ecryptfs_show_options,
 };

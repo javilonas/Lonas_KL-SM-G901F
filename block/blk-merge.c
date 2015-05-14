@@ -178,7 +178,6 @@ int blk_rq_map_sg(struct request_queue *q, struct request *rq,
 				     &nsegs, &cluster);
 	} /* segments in rq */
 
-
 	if (unlikely(rq->cmd_flags & REQ_COPY_USER) &&
 	    (blk_rq_bytes(rq) & q->dma_pad_mask)) {
 		unsigned int pad_len =

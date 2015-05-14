@@ -212,6 +212,7 @@ void usb_remove_ep_devs(struct usb_host_endpoint *endpoint)
 	struct ep_device *ep_dev = endpoint->ep_dev;
 
 	if (ep_dev) {
+		dev_err(&ep_dev->dev, "%s: device_unregister\n", __func__);
 		device_unregister(&ep_dev->dev);
 		endpoint->ep_dev = NULL;
 	}

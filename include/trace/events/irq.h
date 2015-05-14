@@ -43,16 +43,108 @@ TRACE_EVENT(irq_handler_entry,
 	TP_STRUCT__entry(
 		__field(	int,	irq		)
 		__string(	name,	action->name	)
+		__field(void*,	handler)
 	),
 
 	TP_fast_assign(
 		__entry->irq = irq;
 		__assign_str(name, action->name);
+		__entry->handler = action->handler;
 	),
 
-	TP_printk("irq=%d name=%s", __entry->irq, __get_str(name))
+	TP_printk("irq=%d name=%s handler=%pf",
+		 __entry->irq, __get_str(name), __entry->handler)
 );
 
+TRACE_EVENT(mdss_dsi_cmd_mdp_busy_start,
+	TP_PROTO(unsigned long ctrl),
+	TP_ARGS(ctrl),
+	TP_STRUCT__entry(
+		__field(	unsigned long, ctrl)
+	),
+	TP_fast_assign(
+		__entry->ctrl = ctrl;
+	),
+	TP_printk("ctrl=%lx",__entry->ctrl)
+);
+
+TRACE_EVENT(mdss_dsi_cmd_mdp_busy_end,
+	TP_PROTO(unsigned int timeout),
+	TP_ARGS(timeout),
+	TP_STRUCT__entry(
+		__field(	unsigned int, timeout)
+	),
+	TP_fast_assign(
+		__entry->timeout = timeout;
+	),
+	TP_printk("timeout=%d",__entry->timeout)
+);
+
+TRACE_EVENT(mdss_mdp_isr_start,
+	TP_PROTO(int irq, unsigned int isr, unsigned int mask),
+	TP_ARGS(irq, isr, mask),
+	TP_STRUCT__entry(
+		__field(int, irq)
+		__field(unsigned int, isr)
+		__field(unsigned int, mask)
+	),
+	TP_fast_assign(
+		__entry->irq = irq;
+		__entry->isr = isr;
+		__entry->mask = mask;
+	),
+
+	TP_printk("irq=%d isr=%x mask=%x",
+		__entry->irq, __entry->isr, __entry->mask)
+);
+
+TRACE_EVENT(mdss_mdp_isr_end,
+	TP_PROTO(int irq, unsigned int hist_isr, unsigned int hist_mask),
+	TP_ARGS(irq, hist_isr, hist_mask),
+	TP_STRUCT__entry(
+		__field(int, irq)
+		__field(unsigned int, hist_isr)
+		__field(unsigned int, hist_mask)
+	),
+	TP_fast_assign(
+		__entry->irq = irq;
+		__entry->hist_isr = hist_isr;
+		__entry->hist_mask = hist_mask;
+	),
+
+	TP_printk("irq=%d hist_isr=%x hist_mask=%x",
+		__entry->irq, __entry->hist_isr, __entry->hist_mask)
+);
+
+TRACE_EVENT(mdss_dsi_isr_start,
+	TP_PROTO(int irq, unsigned int isr, unsigned long ctrl),
+	TP_ARGS(irq, isr, ctrl),
+	TP_STRUCT__entry(
+		__field(int, irq)
+		__field(unsigned int, isr)
+		__field(unsigned long, ctrl)
+	),
+	TP_fast_assign(
+		__entry->irq = irq;
+		__entry->isr = isr;
+		__entry->ctrl = ctrl;
+	),
+
+	TP_printk("irq=%d isr=%x ctrl=%lx",
+		__entry->irq, __entry->isr, __entry->ctrl)
+);
+
+TRACE_EVENT(mdss_dsi_isr_end,
+	TP_PROTO(int irq),
+	TP_ARGS(irq),
+	TP_STRUCT__entry(
+		__field(	int, irq)
+	),
+	TP_fast_assign(
+		__entry->irq = irq;
+	),
+	TP_printk("irq=%d",__entry->irq)
+);
 /**
  * irq_handler_exit - called immediately after the irq action handler returns
  * @irq: irq number

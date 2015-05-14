@@ -1168,6 +1168,7 @@ void usb_disable_device(struct usb_device *dev, int skip_ep0)
 		/* Now that the interfaces are unbound, nobody should
 		 * try to access them.
 		 */
+		pm_runtime_barrier(&dev->dev);
 		for (i = 0; i < dev->actconfig->desc.bNumInterfaces; i++) {
 			put_device(&dev->actconfig->interface[i]->dev);
 			dev->actconfig->interface[i] = NULL;
@@ -1843,6 +1844,9 @@ free_interfaces:
 	}
 	kfree(new_interfaces);
 
+	dev->actconfig = cp;
+	if (cp)
+		usb_notify_config_device(dev);
 	ret = usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
 			      USB_REQ_SET_CONFIGURATION, 0, configuration, 0,
 			      NULL, 0, USB_CTRL_SET_TIMEOUT);
@@ -1857,13 +1861,13 @@ free_interfaces:
 			put_device(&cp->interface[i]->dev);
 			cp->interface[i] = NULL;
 		}
-		cp = NULL;
+		dev->actconfig = cp = NULL;
 	}
 
-	dev->actconfig = cp;
 	mutex_unlock(hcd->bandwidth_mutex);
 
 	if (!cp) {
+		usb_notify_config_device(dev);
 		usb_set_device_state(dev, USB_STATE_ADDRESS);
 
 		/* Leave LPM disabled while the device is unconfigured. */
@@ -1871,6 +1875,8 @@ free_interfaces:
 		return ret;
 	}
 	usb_set_device_state(dev, USB_STATE_CONFIGURED);
+	if (dev->parent && hcd->driver->udev_enum_done)
+		hcd->driver->udev_enum_done(hcd);
 
 	if (cp->string == NULL &&
 			!(dev->quirks & USB_QUIRK_CONFIG_INTF_STRINGS))

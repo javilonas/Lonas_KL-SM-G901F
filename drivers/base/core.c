@@ -30,6 +30,10 @@
 #include "base.h"
 #include "power/power.h"
 
+#if defined(CONFIG_LEDS_MAX77843_RGB)
+extern void max77843_rgb_off(void);
+#endif
+
 #ifdef CONFIG_SYSFS_DEPRECATED
 #ifdef CONFIG_SYSFS_DEPRECATED_V2
 long sysfs_deprecated = 1;
@@ -1840,6 +1844,13 @@ EXPORT_SYMBOL_GPL(device_move);
 void device_shutdown(void)
 {
 	struct device *dev, *parent;
+
+	pr_err("%s\n", __func__);
+
+#if defined(CONFIG_LEDS_MAX77843_RGB)
+	/* protective function call */
+	max77843_rgb_off();
+#endif
 
 	spin_lock(&devices_kset->list_lock);
 	/*
