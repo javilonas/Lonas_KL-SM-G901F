@@ -1099,4 +1099,8 @@ enum {
 	MDP_WRITEBACK_MIRROR_PAUSE,
 	MDP_WRITEBACK_MIRROR_RESUME,
 };
+
+/* let users know that we have been the new struct formats. */
+#define DUAL_DSI
+
 #endif /*_UAPI_MSM_MDP_H_*/

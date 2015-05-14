@@ -4,7 +4,7 @@
 # Javilonas <admin@lonasdigital.com>
 #
 
-TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/android-ndk-r9d/toolchains/arm-linux-androideabi-4.8/prebuilt/linux-x86/bin/arm-linux-androideabi-"
+TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.8/bin/arm-eabi-"
 DIR="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F"
 export KERNELDIR=`readlink -f .`
 

@@ -10,7 +10,7 @@ echo "#################### Eliminando Restos ####################"
 
 # Rutas
 export ROOTFS_PATH="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/ramdisk"
-export TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/android-ndk-r9d/toolchains/arm-linux-androideabi-4.8/prebuilt/linux-x86/bin/arm-linux-androideabi-"
+export TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.8/bin/arm-eabi-"
 export TOOLBASE="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/buildtools"
 
 echo "#################### Preparando Entorno ####################"
@@ -23,6 +23,7 @@ export REVISION="RTM"
 export KBUILD_BUILD_VERSION="1"
 
 export ARCH=arm
+export SUBARCH=arm
 export CROSS_COMPILE=$TOOLCHAIN
 
 export TARGET_ARCH=arm

@@ -1,0 +1,10 @@
+import /init.superuser.rc
+
+on init
+    export TERMINFO /system/etc/terminfo
+
+on boot
+    chown system system /sys/block/mmcblk0/queue/scheduler
+    chmod 0664 /sys/block/mmcblk0/queue/scheduler
+    restorecon /sys/block/mmcblk0/queue/scheduler
+

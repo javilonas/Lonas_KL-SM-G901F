@@ -1,0 +1,7 @@
+#!/sbin/busybox sh
+#
+# Script sysrw by javilonas
+#
+
+busybox mount -t rootfs -o remount,rw rootfs
+busybox mount -o remount,rw -t auto /system

@@ -10,8 +10,8 @@
  * GNU General Public License for more details.
  */
 
-#include <mhi_sys.h>
-#include <mhi.h>
+#include "mhi_sys.h"
+#include "mhi.h"
 
 #include <soc/qcom/subsystem_restart.h>
 #include <soc/qcom/subsystem_notif.h>
