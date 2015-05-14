@@ -86,6 +86,8 @@ extern int cnss_pcie_shadow_control(struct pci_dev *dev, bool enable);
 extern int cnss_wlan_register_driver(struct cnss_wlan_driver *driver);
 extern void cnss_wlan_unregister_driver(struct cnss_wlan_driver *driver);
 extern int cnss_get_fw_files(struct cnss_fw_files *pfw_files);
+extern int cnss_get_fw_files_for_target(struct cnss_fw_files *pfw_files,
+					u32 target_type, u32 target_version);
 extern void cnss_flush_work(void *work);
 extern void cnss_flush_delayed_work(void *dwork);
 extern void cnss_get_monotonic_boottime(struct timespec *ts);
