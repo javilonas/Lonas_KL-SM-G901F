@@ -1,1 +1,1 @@
-# CONFIG_PROC_AVC is not set
+CONFIG_PROC_AVC=y
