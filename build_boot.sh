@@ -16,7 +16,7 @@ export TOOLBASE="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/buildtools"
 echo "#################### Preparando Entorno ####################"
 export KERNELDIR="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F"
 
-export KERNEL_VERSION="Lonas-KL-0.1"
+export KERNEL_VERSION="Lonas-KL-0.2"
 export VERSION_KL="SM-G901F"
 export REVISION="RTM"
 
