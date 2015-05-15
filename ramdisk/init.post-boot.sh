@@ -23,8 +23,21 @@ ln -s /system/xbin/busybox /system/bin/busybox
 
 sync
 
-# Asegurar Governor for Default
+# barry_allen governor
+chown -R system:system /sys/devices/system/cpu/cpu0/cpufreq/barry_allen
+chmod -R 0666 /sys/devices/system/cpu/cpu0/cpufreq/barry_allen
+chmod 0755 /sys/devices/system/cpu/cpu0/cpufreq/barry_allen
+chown -R system:system /sys/devices/system/cpu/cpu1/cpufreq/barry_allen
+chmod -R 0666 /sys/devices/system/cpu/cpu1/cpufreq/barry_allen
+chmod 0755 /sys/devices/system/cpu/cpu1/cpufreq/barry_allen
+chown -R system:system /sys/devices/system/cpu/cpu2/cpufreq/barry_allen
+chmod -R 0666 /sys/devices/system/cpu/cpu2/cpufreq/barry_allen
+chmod 0755 /sys/devices/system/cpu/cpu2/cpufreq/barry_allen
+chown -R system:system /sys/devices/system/cpu/cpu3/cpufreq/barry_allen
+chmod -R 0666 /sys/devices/system/cpu/cpu3/cpufreq/barry_allen
+chmod 0755 /sys/devices/system/cpu/cpu3/cpufreq/barry_allen
 
+# Asegurar Governor for Default
 chown system system /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate
 chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate
 chown system system /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack
