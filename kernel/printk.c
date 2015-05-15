@@ -1935,7 +1935,10 @@ static int __init seclog_late_init(void)
 	struct proc_dir_entry *entry;
 
 	if (!sec_log_buf)
+	{
+		pr_alert("LAST_KMSG DID NOT INITIALIZE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 		return 0;
+	}
 
 	/* The reason we are using the file name "last_kmsg" is only
 	 * because the dumpstate app is dumping this file.
