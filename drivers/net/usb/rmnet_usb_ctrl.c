@@ -664,7 +664,7 @@ ctrl_read:
 	kfree(list_elem);
 	DBG("%s: Returning %d bytes to %s\n", __func__, bytes_to_read,
 			dev->name);
-	DUMP_BUFFER("Read: ", bytes_to_read, buf);
+	//DUMP_BUFFER("Read: ", bytes_to_read, buf);
 
 	return bytes_to_read;
 }
@@ -722,7 +722,7 @@ static ssize_t rmnet_ctl_write(struct file *file, const char __user * buf,
 		kfree(cpkt);
 		return status;
 	}
-	DUMP_BUFFER("Write: ", size, buf);
+	//DUMP_BUFFER("Write: ", size, buf);
 
 	status = rmnet_usb_ctrl_write_cmd(dev->cudev,
 			USB_CDC_SEND_ENCAPSULATED_COMMAND, 0, cpkt->data,
