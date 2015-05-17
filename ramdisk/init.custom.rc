@@ -1,4 +1,4 @@
-import /init.superuser.rc
+import /init.post-boot.rc
 
 on init
     export TERMINFO /system/etc/terminfo
