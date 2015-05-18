@@ -90,6 +90,9 @@ chmod -h 0664 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
 
 sync
 
+#Supersu
+/system/xbin/daemonsu --auto-daemon &
+
 # KNOX Off
 /res/ext/eliminar_knox.sh
 
@@ -109,14 +112,24 @@ fi
 # Iniciar Zipalign
 /res/ext/zipalign.sh
 
-# Iniciar Tweaks
-/res/ext/tweaks.sh
+# Tweaks
+echo "5" > /proc/sys/vm/laptop_mode
+echo "8" > /proc/sys/vm/page-cluster
+echo "50" > /sys/module/zswap/parameters/max_pool_percent
 
 sync
 
 stop thermal-engine
 /system/xbin/busybox run-parts /system/etc/init.d
 start thermal-engine
+
+sync
+
+# Now wait for the rom to finish booting up
+# (by checking for any android process)
+while ! pgrep android.process.acore ; do
+  sleep 2
+done
 
 mount -t rootfs -o remount,ro rootfs
 mount -o remount,ro -t auto /system

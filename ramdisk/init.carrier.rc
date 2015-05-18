@@ -31,7 +31,7 @@ on boot
     write /proc/sys/vm/swappiness 130
 
 # IOT WLAN
-  	setprop net.tcp.delack.wifi        8
+    setprop net.tcp.delack.wifi        8
     setprop net.tcp.usercfg.wifi       1
     
 # SENSOR FRAMEWORK : starts fingerprintService

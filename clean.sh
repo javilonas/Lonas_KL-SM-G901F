@@ -41,16 +41,16 @@ rm -rf $KERNELDIR/arch/arm/boot/zImage-dtb > /dev/null 2>&1
 rm -rf $KERNELDIR/arch/arm/boot/Image > /dev/null 2>&1
 rm -rf $KERNELDIR/arch/arm/boot/dt.img > /dev/null 2>&1
 rm -rf $KERNELDIR/arch/arm/boot/*.img > /dev/null 2>&1
-rm -rf $KERNELDIR/arch/arm/boot/dts/*.dtb > /dev/null 2>&1
-rm -rf $KERNELDIR/arch/arm/boot/dts/*.reverse.dts > /dev/null 2>&1
+#rm -rf $KERNELDIR/arch/arm/boot/dts/*.dtb > /dev/null 2>&1
+#rm -rf $KERNELDIR/arch/arm/boot/dts/*.reverse.dts > /dev/null 2>&1
 
 rm -rf $KERNELDIR/output/arch/arm/boot/zImage > /dev/null 2>&1
 rm -rf $KERNELDIR/output/arch/arm/boot/zImage-dtb > /dev/null 2>&1
 rm -rf $KERNELDIR/output/arch/arm/boot/Image > /dev/null 2>&1
 rm -rf $KERNELDIR/output/arch/arm/boot/dt.img > /dev/null 2>&1
 rm -rf $KERNELDIR/output/arch/arm/boot/*.img > /dev/null 2>&1
-rm -rf $KERNELDIR/output/arch/arm/boot/dts/*.dtb > /dev/null 2>&1
-rm -rf $KERNELDIR/output/arch/arm/boot/dts/*.reverse.dts > /dev/null 2>&1
+#rm -rf $KERNELDIR/output/arch/arm/boot/dts/*.dtb > /dev/null 2>&1
+#rm -rf $KERNELDIR/output/arch/arm/boot/dts/*.reverse.dts > /dev/null 2>&1
 
 rm $KERNELDIR/zImage > /dev/null 2>&1
 rm $KERNELDIR/zImage-dtb > /dev/null 2>&1
