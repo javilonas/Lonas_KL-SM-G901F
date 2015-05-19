@@ -1657,12 +1657,10 @@ long do_fork(unsigned long clone_flags,
 	 */
 	if (!IS_ERR(p)) {
 		struct completion vfork;
-		struct pid *pid;
 
 		trace_sched_process_fork(current, p);
 
-		pid = get_task_pid(p, PIDTYPE_PID);
-		nr = pid_vnr(pid);
+		nr = task_pid_vnr(p);
 
 		if (clone_flags & CLONE_PARENT_SETTID)
 			put_user(nr, parent_tidptr);
@@ -1677,14 +1675,12 @@ long do_fork(unsigned long clone_flags,
 
 		/* forking complete and child started to run, tell ptracer */
 		if (unlikely(trace))
-			ptrace_event_pid(trace, pid);
+			ptrace_event(trace, nr);
 
 		if (clone_flags & CLONE_VFORK) {
 			if (!wait_for_vfork_done(p, &vfork))
-				ptrace_event_pid(PTRACE_EVENT_VFORK_DONE, pid);
+				ptrace_event(PTRACE_EVENT_VFORK_DONE, nr);
 		}
-
-		put_pid(pid);
 	} else {
 		nr = PTR_ERR(p);
 	}
