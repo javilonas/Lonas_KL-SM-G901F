@@ -1,0 +1,11 @@
+#
+# start LPowerCC
+#
+service lpowercc /system/bin/sh /init.lpowercc.sh
+     class late_start
+     user root
+     disabled
+     oneshot
+
+on property:sys.boot_completed=1
+     start lpowercc

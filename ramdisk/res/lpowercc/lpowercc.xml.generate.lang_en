@@ -1,0 +1,7 @@
+#!/system/bin/sh
+
+XML=$CONFIG_XML
+
+echo "" > $XML
+
+chmod 777 $XML
