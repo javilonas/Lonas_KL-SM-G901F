@@ -1,7 +1,7 @@
 /*
  * Author Rem Sound: javilonas, 23.05.2015
  * 
- * Version 1.2 to WCD9330 TomTom codec driver
+ * Version 1.3 to WCD9330 TomTom codec driver
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -384,6 +384,9 @@ static ssize_t register_dump_show(struct device *dev, struct device_attribute *a
 	// Input gains
 	sprintf(buf+strlen(buf), "\n** Input gains\n");
 
+	sprintf(buf+strlen(buf), "TOMTOM_A_CDC_RX8_VOL_CTL_B2_CTL: %d\n", 
+		tomtom_read(codec, TOMTOM_A_CDC_RX8_VOL_CTL_B2_CTL));
+
 	sprintf(buf+strlen(buf), "TOMTOM_A_CDC_TX1_VOL_CTL_GAIN: %d\n", 
 		tomtom_read(codec, TOMTOM_A_CDC_TX1_VOL_CTL_GAIN));
 
@@ -402,7 +405,7 @@ static ssize_t register_dump_show(struct device *dev, struct device_attribute *a
 	sprintf(buf+strlen(buf), "TOMTOM_A_CDC_TX6_VOL_CTL_GAIN: %d\n", 
 		tomtom_read(codec, TOMTOM_A_CDC_TX6_VOL_CTL_GAIN));
 
-	sprintf(buf+strlen(buf), "TOMTOM_A_CDC_TX7_VOL_CTL_GAIN: %d\n", 
+	sprintf(buf+strlen(buf), "TOMTOM_A_CDC_TX7_VOL_CTL_GAIN %d\n", 
 		tomtom_read(codec, TOMTOM_A_CDC_TX7_VOL_CTL_GAIN));
 
 	sprintf(buf+strlen(buf), "TOMTOM_A_CDC_TX8_VOL_CTL_GAIN: %d\n", 
