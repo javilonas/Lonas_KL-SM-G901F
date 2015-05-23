@@ -1807,4 +1807,10 @@ config SAMSUNG_PRODUCT_SHIP
         bool "set up for product shipping"
         default n
 
+config CHARGE_LEVEL
+	bool "Charge level interface"
+	default y
+	help
+	  Allows configuration of ac, usb and wireless charging levels	
+
 endif
