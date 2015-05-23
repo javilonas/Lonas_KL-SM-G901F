@@ -41,6 +41,10 @@
 #include "wcdcal-hwdep.h"
 #include "wcd_cpe_core.h"
 
+#ifdef CONFIG_SND_REM
+#include "rem_sound.h"
+#endif
+
 #if defined(CONFIG_SND_SOC_ES705)
 #include "audience/es705-export.h"
 #endif
@@ -4765,8 +4769,13 @@ static int tomtom_volatile(struct snd_soc_codec *ssc, unsigned int reg)
 	return 0;
 }
 
+#ifdef CONFIG_SND_REM
+int tomtom_write(struct snd_soc_codec *codec, unsigned int reg,
+	unsigned int value)
+#else
 static int tomtom_write(struct snd_soc_codec *codec, unsigned int reg,
 	unsigned int value)
+#endif
 {
 	int ret;
 	struct wcd9xxx *wcd9xxx = codec->control_data;
@@ -4775,6 +4784,11 @@ static int tomtom_write(struct snd_soc_codec *codec, unsigned int reg,
 		return 0;
 
 	BUG_ON(reg > TOMTOM_MAX_REGISTER);
+
+#ifdef CONFIG_SND_REM
+	// Rem Sound write hook
+	value = rem_sound_hook_tomtom_write(reg, value);
+#endif
 
 	if (!tomtom_volatile(codec, reg)) {
 		ret = snd_soc_cache_write(codec, reg, value);
@@ -4785,8 +4799,42 @@ static int tomtom_write(struct snd_soc_codec *codec, unsigned int reg,
 
 	return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, value);
 }
+
+#ifdef CONFIG_SND_REM
+EXPORT_SYMBOL(tomtom_write);
+#endif
+ 
+#ifdef CONFIG_SND_REM
+int tomtom_write_no_hook(struct snd_soc_codec *codec, unsigned int reg,
+	unsigned int value)
+{
+	int ret;
+	struct wcd9xxx *wcd9xxx = codec->control_data;
+
+	if (reg == SND_SOC_NOPM)
+		return 0;
+
+	BUG_ON(reg > TOMTOM_MAX_REGISTER);
+	
+	if (!tomtom_volatile(codec, reg)) {
+		ret = snd_soc_cache_write(codec, reg, value);
+		if (ret != 0)
+			dev_err(codec->dev, "Cache write to %x failed: %d\n",
+				reg, ret);
+	}
+
+	return wcd9xxx_reg_write(&wcd9xxx->core_res, reg, value);
+}
+EXPORT_SYMBOL(tomtom_write_no_hook);
+#endif
+
+#ifdef CONFIG_SND_REM
+unsigned int tomtom_read(struct snd_soc_codec *codec,
+				unsigned int reg)
+#else
 static unsigned int tomtom_read(struct snd_soc_codec *codec,
 				unsigned int reg)
+#endif
 {
 	unsigned int val;
 	int ret;
@@ -4811,6 +4859,10 @@ static unsigned int tomtom_read(struct snd_soc_codec *codec,
 	val = wcd9xxx_reg_read(&wcd9xxx->core_res, reg);
 	return val;
 }
+
+#ifdef CONFIG_SND_REM
+EXPORT_SYMBOL(tomtom_read);
+#endif
 
 static int tomtom_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
@@ -8210,6 +8262,12 @@ static int tomtom_codec_probe(struct snd_soc_codec *codec)
 	snd_soc_dapm_sync(dapm);
 
 	codec->ignore_pmdown_time = 1;
+
+#ifdef CONFIG_SND_REM
+	// Rem Sound probe hook
+	rem_sound_hook_tomtom_codec_probe(codec);
+#endif
+
 	ret = tomtom_cpe_initialize(codec);
 	if (ret) {
 		dev_info(codec->dev,

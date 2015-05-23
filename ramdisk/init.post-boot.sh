@@ -87,6 +87,8 @@ chmod -h 0664 /sys/devices/system/cpu/cpu2/cpufreq/scaling_governor
 chmod 777 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
 write /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor "barry_allen"
 chmod -h 0664 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+ 
+sleep 0.5s
 
 sync
 

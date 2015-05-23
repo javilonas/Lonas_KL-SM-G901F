@@ -600,5 +600,13 @@ config SND_SOC_MSM_HDMI_CODEC_RX
 	help
 	HDMI audio drivers should be built only if the platform
         supports hdmi panel.
+
+config SND_REM
+	bool "Rem Sound Engine"
+	default y
+	depends on SND_SOC_WCD9330
+	help
+        Compatible to WCD9330 TomTom codec driver
+	  Include the Rem Sound Engine
         
 source "sound/soc/codecs/dbmd2/Kconfig"
