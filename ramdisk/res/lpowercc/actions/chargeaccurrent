@@ -1,0 +1,104 @@
+#!/system/bin/sh
+
+if [[ ! -z $2 ]]; then
+    filename=$(basename $2)
+fi
+
+if [[ ! -z $3 ]]; then
+  evalcmd='eval "$filename=$3"'
+  eval $evalcmd
+fi
+
+chargeaccurrent_predef="0"
+chargeaccurrent_find=`grep "chargeaccurrent_predef" $DEFAULT_PROFILE | cut -d'=' -f2`
+
+write_value() {  
+  echo "$1=$2" >> $DEFAULT_PROFILE
+}
+
+edit_value() {
+  g_find=`grep $1=.* $DEFAULT_PROFILE`
+    
+  if [[ -z $g_find ]]; then
+    write_value $1 $2
+  else
+    sed -i "s/$1=[^ ]*/$1=$2/" $DEFAULT_PROFILE 
+  fi
+}
+
+write_values(){
+  edit_value charge_level_ac $charge_level_ac
+  edit_value chargeaccurrent_predef $chargeaccurrent_predef 
+
+  echo $charge_level_ac > /sys/kernel/charge_levels/charge_level_ac
+}
+
+case "$chargeaccurrentpredef" in
+  0)
+    charge_level_ac="1000"
+    chargeaccurrent_predef="0"
+    write_values
+    ;;
+  1)
+    charge_level_ac="1100"
+    chargeaccurrent_predef="1"
+    write_values
+    ;;
+  2)
+    charge_level_ac="1200"
+    chargeaccurrent_predef="2"
+    write_values
+    ;;
+  3)
+    charge_level_ac="1300"
+    chargeaccurrent_predef="3"
+    write_values
+    ;;
+  4)
+    charge_level_ac="1400"
+    chargeaccurrent_predef="4"
+    write_values
+    ;;
+  5)
+    charge_level_ac="1500"
+    chargeaccurrent_predef="5"
+    write_values
+    ;;
+  6)
+    charge_level_ac="1600"
+    chargeaccurrent_predef="6"
+    write_values
+    ;;
+  7)
+    charge_level_ac="1700"
+    chargeaccurrent_predef="7"
+    write_values
+    ;;
+  8)
+    charge_level_ac="1800"
+    chargeaccurrent_predef="8"
+    write_values
+    ;;
+  9)
+    charge_level_ac="1900"
+    chargeaccurrent_predef="9"
+    write_values
+    ;;
+  10)
+    charge_level_ac="2000"
+    chargeaccurrent_predef="10"
+    write_values
+    ;;
+  11)
+    charge_level_ac="2100"
+    chargeaccurrent_predef="11"
+    write_values
+    ;;
+  *)
+    if [[ ! -z $chargeaccurrent_find ]]; then
+      chargeaccurrent_predef="$chargeaccurrent_find"
+    fi 
+    ;;
+esac;
+
+eval echo $chargeaccurrent_predef

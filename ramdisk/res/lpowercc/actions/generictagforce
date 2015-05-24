@@ -1,0 +1,18 @@
+#!/system/bin/sh
+
+if [ -f $3 ];then
+	FILEVAR=$2_$(basename $3)
+
+	if [ -z $4 ]; then
+		evalcmd='eval echo \$$FILEVAR'
+		if [ "a`eval $evalcmd`" == "a" ]; then
+			eval $FILEVAR=`cat $3`
+			echo $FILEVAR=`cat $3` >> $DEFAULT_PROFILE
+		fi
+	else
+		echo $4 > $3
+		eval $FILEVAR=`cat $3`
+	fi
+
+	eval echo \$$FILEVAR
+fi
