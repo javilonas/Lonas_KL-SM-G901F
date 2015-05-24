@@ -14,13 +14,19 @@
  *
  */
 
+
+#include <sound/soc.h>
+#include <sound/core.h>
+
 #include <linux/module.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
 #include <linux/kallsyms.h>
 
-#include <sound/soc.h>
-#include <sound/core.h>
+#include <linux/delay.h>
+#include <linux/miscdevice.h>
+#include <linux/switch.h>
+#include <linux/version.h>
 
 #include <linux/mfd/wcd9xxx/core.h>
 #include <linux/mfd/wcd9xxx/wcd9xxx_registers.h>
@@ -32,6 +38,9 @@
 #include "wcd9xxx-common.h"
 
 #include "rem_sound.h"
+
+#include <linux/jiffies.h>
+#include <linux/workqueue.h>
 
 /*****************************************/
 // Variables
