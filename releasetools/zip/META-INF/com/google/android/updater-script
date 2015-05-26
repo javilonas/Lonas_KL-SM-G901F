@@ -38,8 +38,6 @@ show_progress(0.100000, 40);
 ui_print(" - Eliminando restos anteriores");
 ui_print(" ");
 ui_print(" ");
-delete_recursive("/data/.lpowercc");
-ui_print(" ");
 ui_print(" ");
 show_progress(0.100000, 50);
 ui_print(" ");

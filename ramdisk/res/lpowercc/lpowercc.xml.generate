@@ -1,7 +1,0 @@
-#!/system/bin/sh
-
-if [[ $(getprop persist.sys.language) == "es" ]]; then
-	source /res/lpowercc/lpowercc.xml.generate.lang_es
-else
-	source /res/lpowercc/lpowercc.xml.generate.lang_en
-fi
