@@ -135,7 +135,7 @@ static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
 // Stock S5+ = 2457600
 // Stock Note4 = 2649600
-#define TOP_STOCK_FREQ 2457600
+#define TOP_STOCK_FREQ 2496000
 
 static bool io_is_busy;
 
