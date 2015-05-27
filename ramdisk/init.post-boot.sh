@@ -92,6 +92,29 @@ sleep 0.5s
 
 sync
 
+# Perfil consumo Medio
+echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked 
+echo "20000" > /sys/devices/system/cpu/cpufreq/barry_allen/above_hispeed_delay 
+echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/boost 
+echo "" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse 
+echo "80000" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse_duration 
+echo "90" > /sys/devices/system/cpu/cpufreq/barry_allen/go_hispeed_load 
+echo "960000" > /sys/devices/system/cpu/cpufreq/barry_allen/hispeed_freq 
+echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/io_is_busy 
+echo "20000" > /sys/devices/system/cpu/cpufreq/barry_allen/min_sample_time 
+echo "100000" > /sys/devices/system/cpu/cpufreq/barry_allen/sampling_down_factor 
+echo "1036800" > /sys/devices/system/cpu/cpufreq/barry_allen/sync_freq 
+echo "80" > /sys/devices/system/cpu/cpufreq/barry_allen/target_loads
+echo "50000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate 
+echo "20000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack 
+echo "1267200" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_freq 
+echo "50" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_load 
+echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked 
+ 
+sleep 0.5s
+
+sync
+
 #Supersu
 /system/xbin/daemonsu --auto-daemon &
 
@@ -114,10 +137,42 @@ fi
 # Iniciar Zipalign
 /res/ext/zipalign.sh
 
-# Tweaks
+# Tweaks (Javilonas)
 echo "5" > /proc/sys/vm/laptop_mode
 echo "8" > /proc/sys/vm/page-cluster
+echo "8192" > /proc/sys/vm/min_free_kbytes
+
+# Zswap compresión y gestión (Javilonas)
 echo "50" > /sys/module/zswap/parameters/max_pool_percent
+echo "85" > /sys/module/zswap/parameters/max_compression_ratio
+
+# Máximo ahorro batería (Javilonas)
+echo "3000" > /proc/sys/vm/dirty_writeback_centisecs
+echo "500" > /proc/sys/vm/dirty_expire_centisecs
+
+# Carga rápida USB y AC
+echo "900" > /sys/kernel/charge_levels/charge_level_usb
+echo "1200" > /sys/kernel/charge_levels/charge_level_ac
+
+sync
+
+sleep 0.2s
+
+# LMK: Super Moderado (Javilonas)
+# Forground apps    : 12288 pages /  48Mb
+# Visible apps      : 15360 pages /  60Mb
+# Secondary server  : 21504 pages /  84Mb
+# Hidden apps       : 32768 pages / 128Mb
+# Content providers : 49152 pages / 192Mb
+# Emtpy apps        : 65536 pages / 256Mb
+#
+chmod 777 /sys/module/lowmemorykiller/parameters/minfree
+echo "12288,15360,21504,32768,49152,65536" > /sys/module/lowmemorykiller/parameters/minfree
+chmod 0644 /sys/module/lowmemorykiller/parameters/minfree
+
+sync
+
+sleep 0.2s
 
 sync
 
@@ -126,6 +181,8 @@ stop thermal-engine
 start thermal-engine
 
 sync
+
+sleep 0.2s
 
 # Now wait for the rom to finish booting up
 # (by checking for any android process)
