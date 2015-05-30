@@ -199,7 +199,7 @@ static unsigned int calculate_thread_stats(void)
 	return nr_run;
 }
 
-static void __cpuinit intelli_plug_boost_fn(struct work_struct *work)
+static void __ref intelli_plug_boost_fn(struct work_struct *work)
 {
 
 	int nr_cpus = num_online_cpus();
@@ -250,7 +250,7 @@ static void unplug_cpu(int min_active_cpu)
 	}
 }
 
-static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
+static void __ref intelli_plug_work_fn(struct work_struct *work)
 {
 	unsigned int nr_run_stat;
 	unsigned int cpu_count = 0;
@@ -410,10 +410,29 @@ static void wakeup_boost(void)
 	}
 }
 
+void __ref intelli_plug_perf_boost(bool on)
+{
+    unsigned int cpu;
+    
+    if (intelli_plug_active) {
+        flush_workqueue(intelliplug_wq);
+        if (on) {
+            for_each_possible_cpu(cpu) {
+                if (!cpu_online(cpu))
+                cpu_up(cpu);
+            }
+        } else {
+            queue_delayed_work_on(0, intelliplug_wq,
+            	&intelli_plug_work,
+            	msecs_to_jiffies(sampling_time));
+        }
+    }
+}
+
 #ifdef CONFIG_POWERSUSPEND
-static void __cpuinit intelli_plug_resume(struct power_suspend *handler)
+static void __ref intelli_plug_resume(struct power_suspend *handler)
 #else
-static void __cpuinit intelli_plug_resume(struct early_suspend *handler)
+static void __ref intelli_plug_resume(struct early_suspend *handler)
 #endif
 {
 
