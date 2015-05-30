@@ -150,3 +150,4 @@ obj-$(CONFIG_SEC_BSP) += sec_bsp.o
 obj-$(CONFIG_SEC_THERMISTOR) += sec_thermistor.o apq8084-thermistor.o
 obj-$(CONFIG_BT_BCM4358) += board-bluetooth-bcm4358.o
 obj-$(CONFIG_GSM_MODEM_SPRD6500) += board-sprd6500-spi.o board-sprd6500-modems.o
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o

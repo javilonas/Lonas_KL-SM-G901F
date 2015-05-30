@@ -10,7 +10,7 @@
  * published by the Free Software Foundation.
  */
 
-#define DEBUG
+//#define DEBUG
 
 #include <linux/mfd/max77843.h>
 #include <linux/mfd/max77843-private.h>
@@ -185,9 +185,9 @@ static int max77843_fg_read_vcell(struct max77843_fuelgauge_data *fuelgauge)
 	temp2 = temp / 1000000;
 	vcell += (temp2 << 4);
 
-	if (!(fuelgauge->info.pr_cnt % PRINT_COUNT))
-		pr_info("%s: VCELL(%d), data(0x%04x)\n",
-			__func__, vcell, (data[1]<<8) | data[0]);
+	//if (!(fuelgauge->info.pr_cnt % PRINT_COUNT))
+	//	pr_info("%s: VCELL(%d), data(0x%04x)\n",
+	//		__func__, vcell, (data[1]<<8) | data[0]);
 
 	return vcell;
 }
@@ -488,7 +488,7 @@ static int max77843_fg_read_current(struct max77843_fuelgauge_data *fuelgauge, i
 
 	temp = ((data1[1]<<8) | data1[0]) & 0xFFFF;
 	/* Debug log for abnormal current case */
-	pr_info("%s: CURRENT_REG(0x%04x)\n", __func__, temp);
+	//pr_info("%s: CURRENT_REG(0x%04x)\n", __func__, temp);
 	if (temp & (0x1 << 15)) {
 		sign = NEGATIVE;
 		temp = (~temp & 0xFFFF) + 1;
