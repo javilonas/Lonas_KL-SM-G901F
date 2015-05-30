@@ -13,6 +13,7 @@
 #include <linux/mfd/max77804k.h>
 #include <linux/mfd/max77804k-private.h>
 #include <linux/of_gpio.h>
+#include <linux/fastchg.h>
 #include <linux/battery/charger/max77804k_charger.h>
 #ifdef CONFIG_USB_HOST_NOTIFY
 #include <linux/host_notify.h>
@@ -117,6 +118,8 @@ static enum power_supply_property sec_charger_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 #endif
 };
+int charge_current_override = 0;
+
 static enum power_supply_property max77804k_otg_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 };
@@ -543,7 +546,12 @@ static void reduce_input_current(struct max77804k_charger_data *charger, int cur
 	u8 set_reg;
 	u8 set_value;
 	unsigned int min_input_current = 0;
-
+	
+	if (force_fast_charge)
+	{
+		pr_alert("FAST CHARGE IGNORE REDUCE CURRENT!!!!");
+		return;	
+	}
 	if ((!charger->is_charging) || mutex_is_locked(&charger->ops_lock) ||
 		(charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS))
 		return;
@@ -847,16 +855,95 @@ static int sec_chg_get_property(struct power_supply *psy,
 	return 0;
 }
 
+static bool check_fastcharge(struct max77804k_charger_data *charger)
+{
+	bool ret = false;
+	int charge_current = 0;
+	union power_supply_propval value;
+	psy_do_property("ps", get, POWER_SUPPLY_PROP_STATUS, value)
+	
+	//Check for battery issues
+	if (value.intval == POWER_SUPPLY_HEALTH_UNSPEC_FAILURE || value.intval == POWER_SUPPLY_HEALTH_OVERHEATLIMIT)
+	{
+		max77804k_set_input_current(charger, 0);
+		return ret;
+	}
+	
+	/* We are in basic Fast Charge mode, so we substitute AC to USB
+	   levels */
+	if (force_fast_charge == FAST_CHARGE_FORCE_AC) {
+		switch(charger->cable_type) {
+			/* These are low current USB connections,
+			   apply 1.A level to USB */
+			case POWER_SUPPLY_TYPE_USB:
+			case POWER_SUPPLY_TYPE_USB_ACA:
+			case POWER_SUPPLY_TYPE_CARDOCK:
+			case POWER_SUPPLY_TYPE_OTG:
+				charge_current = USB_CHARGE_1000;
+				ret = true;
+				break;
+
+		}
+	/* We are in advanced Fast Charge mode, so we apply custom charging
+	   levels for both AC and USB */
+	} else if (force_fast_charge == FAST_CHARGE_FORCE_CUSTOM_MA) {
+		switch(charger->cable_type) {
+			/* These are USB connections, apply custom USB current
+			   for all of them */
+			case POWER_SUPPLY_TYPE_USB:
+			case POWER_SUPPLY_TYPE_USB_DCP:
+			case POWER_SUPPLY_TYPE_USB_CDP:
+			case POWER_SUPPLY_TYPE_USB_ACA:
+			case POWER_SUPPLY_TYPE_CARDOCK:
+			case POWER_SUPPLY_TYPE_OTG:
+				charge_current = usb_charge_level;
+				ret = true;
+				break;
+			/* These are AC connections, apply custom AC current
+			   for all of them */
+			case POWER_SUPPLY_TYPE_MAINS:
+				/* but never go above 2.2A */
+				charge_current = min(ac_charge_level, MAX_CHARGE_LEVEL);
+				ret = true;
+				break;
+			/* Don't do anything for any other kind of connections
+			   and don't touch when type is unknown */
+			default:
+				break;
+		}
+	}
+	if (ret)
+	{
+		max77804k_set_charger_state(charger, charger->is_charging);
+		charger->charging_current_max = charge_current;
+		charger->charging_current = charge_current;
+		max77804k_set_charge_current(charger, charge_current);
+		max77804k_set_input_current(charger, charge_current);
+			max77804k_set_topoff_current(charger,
+				charge_current,
+				charge_current);
+		charge_current_override = charge_current;
+	}
+	else
+		charge_current_override = 0;
+	pr_alert("FAST CHARGE1!!!! - %d - %d - %d", charge_current, ret, force_fast_charge);
+	return ret;
+}
+
 static int sec_chg_set_property(struct power_supply *psy,
 		enum power_supply_property psp,
 		const union power_supply_propval *val)
 {
+	int current_now;
 	struct max77804k_charger_data *charger =
 		container_of(psy, struct max77804k_charger_data, psy_chg);
 	union power_supply_propval value;
 	int set_charging_current, set_charging_current_max;
-	const int usb_charging_current = charger->pdata->charging_current[
+	int usb_charging_current = charger->pdata->charging_current[
 		POWER_SUPPLY_TYPE_USB].fast_charging_current;
+	if (charge_current_override > 0)
+		usb_charging_current = charge_current_override;
+	current_now = 0;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -893,6 +980,8 @@ static int sec_chg_set_property(struct power_supply *psy,
 			set_charging_current_max =
 				charger->pdata->charging_current[
 				POWER_SUPPLY_TYPE_BATTERY].input_current_limit;
+			if (charge_current_override > 0)
+				set_charging_current_max = charge_current_override;
 		} else {
 			charger->is_charging = true;
 			charger->charging_current_max =
@@ -925,7 +1014,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 							set_charging_current = SIOP_WIRELESS_CHARGING_LIMIT_CURRENT;
 					}
 				} else {
-					if (set_charging_current_max > SIOP_INPUT_LIMIT_CURRENT) {
+					if (screen_on_current_limit && set_charging_current_max > SIOP_INPUT_LIMIT_CURRENT) {
 						set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
 						if (set_charging_current > SIOP_CHARGING_LIMIT_CURRENT)
 							set_charging_current = SIOP_CHARGING_LIMIT_CURRENT;
@@ -939,22 +1028,25 @@ static int sec_chg_set_property(struct power_supply *psy,
 				(charger->status == POWER_SUPPLY_STATUS_DISCHARGING) ||
 				(value.intval == POWER_SUPPLY_HEALTH_UNSPEC_FAILURE) ||
 				(value.intval == POWER_SUPPLY_HEALTH_OVERHEATLIMIT)) {
-			/* current setting */
-			max77804k_set_charge_current(charger,
-				set_charging_current);
-			/* if battery is removed, disable input current and reenable input current
-			  *  to enable buck always */
-			if (value.intval == POWER_SUPPLY_HEALTH_UNSPEC_FAILURE ||
-				value.intval == POWER_SUPPLY_HEALTH_OVERHEATLIMIT)
-				max77804k_set_input_current(charger, 0);
-			else
-				max77804k_set_input_current(charger,
-						set_charging_current_max);
-			max77804k_set_topoff_current(charger,
-				charger->pdata->charging_current[
-				val->intval].full_check_current_1st,
-				charger->pdata->charging_current[
-				val->intval].full_check_current_2nd);
+			if (!check_fastcharge(charger))
+			{
+				/* current setting */
+				max77804k_set_charge_current(charger,
+					set_charging_current);
+				/* if battery is removed, disable input current and reenable input current
+				  *  to enable buck always */
+				if (value.intval == POWER_SUPPLY_HEALTH_UNSPEC_FAILURE ||
+					value.intval == POWER_SUPPLY_HEALTH_OVERHEATLIMIT)
+					max77804k_set_input_current(charger, 0);
+				else
+					max77804k_set_input_current(charger,
+							set_charging_current_max);
+				max77804k_set_topoff_current(charger,
+					charger->pdata->charging_current[
+					val->intval].full_check_current_1st,
+					charger->pdata->charging_current[
+					val->intval].full_check_current_2nd);
+			}
 		}
 		break;
 	/* val->intval : input charging current */
@@ -974,9 +1066,11 @@ static int sec_chg_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 		charger->siop_level = val->intval;
 		if (charger->is_charging) {
+			if (check_fastcharge(charger))
+				goto got_override;
+
 			/* decrease the charging current according to siop level */
-			int current_now =
-				charger->charging_current * val->intval / 100;
+			current_now = charger->charging_current * val->intval / 100;
 
 			/* do forced set charging current */
 			if (current_now > 0 &&
@@ -984,14 +1078,14 @@ static int sec_chg_set_property(struct power_supply *psy,
 				current_now = usb_charging_current;
 
 			if (charger->cable_type == POWER_SUPPLY_TYPE_MAINS) {
-				if (charger->siop_level < 100 ) {
+				if (screen_on_current_limit && charger->siop_level < 100 ) {
 					set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
 				} else {
 					set_charging_current_max =
 						charger->charging_current_max;
 				}
 
-				if (charger->siop_level < 100 &&
+				if (screen_on_current_limit && charger->siop_level < 100 &&
 						current_now > SIOP_CHARGING_LIMIT_CURRENT)
 					current_now = SIOP_CHARGING_LIMIT_CURRENT;
 				max77804k_set_input_current(charger,
@@ -1004,15 +1098,15 @@ static int sec_chg_set_property(struct power_supply *psy,
 						charger->charging_current_max;
 				}
 
-				if (charger->siop_level < 100 &&
+				if (screen_on_current_limit && charger->siop_level < 100 &&
 						current_now > SIOP_WIRELESS_CHARGING_LIMIT_CURRENT)
 					current_now = SIOP_WIRELESS_CHARGING_LIMIT_CURRENT;
 				max77804k_set_input_current(charger,
 					set_charging_current_max);
 			}
-
 			max77804k_set_charge_current(charger, current_now);
 		}
+got_override:
 		break;
 #if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
@@ -1460,7 +1554,7 @@ static irqreturn_t max77804k_bypass_irq(int irq, void *data)
 		max77804k_update_reg(chg_data->max77804k->i2c,
 			MAX77804K_CHG_REG_CHG_CNFG_00, 0, MAX77804K_CHG_CNFG_00_OTG_CTRL);
 	}
-	if (byp_dtls & 0x8) {
+	if ((byp_dtls & 0x8) && !force_fast_charge) {
 		reduce_input_current(chg_data, REDUCE_CURRENT_STEP);
 	}
 
@@ -1552,8 +1646,8 @@ static void max77804k_chgin_isr_work(struct work_struct *work)
 
 		if (charger->is_charging) {
 			/* reduce only at CC MODE */
-			if (((chgin_dtls == 0x0) || (chgin_dtls == 0x01)) &&
-					(chg_dtls == 0x01) && (stable_count > 2))
+			if (!force_fast_charge && (((chgin_dtls == 0x0) || (chgin_dtls == 0x01)) &&
+					(chg_dtls == 0x01) && (stable_count > 2)))
 				reduce_input_current(charger, REDUCE_CURRENT_STEP);
 		}
 		prev_chgin_dtls = chgin_dtls;

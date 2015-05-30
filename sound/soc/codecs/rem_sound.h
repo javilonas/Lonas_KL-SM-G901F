@@ -1,7 +1,7 @@
 /*
  * Author Rem Sound: javilonas, 23.05.2015
  * 
- * Version 1.2 to WCD9330 TomTom codec driver
+ * Version 1.3 to WCD9330 TomTom codec driver
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -54,7 +54,7 @@ unsigned int rem_sound_hook_tomtom_write(unsigned int reg, unsigned int value);
 
 // rem sound general
 #define REM_SOUND_DEFAULT		1
-#define REM_SOUND_VERSION		"1.2"
+#define REM_SOUND_VERSION		"1.3"
 
 // Debug mode
 #define DEBUG_DEFAULT 			0

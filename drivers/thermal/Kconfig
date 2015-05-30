@@ -100,16 +100,29 @@ config THERMAL_TSENS8974
 	  thermal userspace client when a threshold is reached. Warm/Cool
 	  temperature thresholds can be set independently for each sensor.
 
+choice
+	prompt "MSM Thermal Monitor Types"
+	default THERMAL_MONITOR
+
 config THERMAL_MONITOR
 	bool "Monitor thermal state and limit CPU Frequency"
 	depends on THERMAL_TSENS8960 || THERMAL_TSENS8974
 	depends on CPU_FREQ_MSM
-	default n
 	help
 	  This enables thermal monitoring capability in the kernel in the
 	  absence of a system wide thermal monitoring entity or until such an
 	  entity starts running in the userspace. Monitors TSENS temperature
 	  and limits the max frequency of the cores.
+
+config INTELLI_THERMAL
+	bool "Better thermal monitor for MSM"
+	depends on THERMAL_TSENS8974
+	depends on CPU_FREQ_MSM
+	help
+	  This enables thermal monitoring capability in the kernel replacing
+	  userspace thermal monitoring altogether.
+
+endchoice
 
 config SPEAR_THERMAL
 	bool "SPEAr thermal sensor driver"

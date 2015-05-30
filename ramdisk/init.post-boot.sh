@@ -92,6 +92,29 @@ sleep 0.5s
 
 sync
 
+# Perfil consumo Medio
+echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked
+echo "20000" > /sys/devices/system/cpu/cpufreq/barry_allen/above_hispeed_delay
+echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/boost
+echo "" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse
+echo "80000" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse_duration
+echo "90" > /sys/devices/system/cpu/cpufreq/barry_allen/go_hispeed_load
+echo "1728000" > /sys/devices/system/cpu/cpufreq/barry_allen/hispeed_freq
+echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/io_is_busy
+echo "60000" > /sys/devices/system/cpu/cpufreq/barry_allen/min_sample_time
+echo "100000" > /sys/devices/system/cpu/cpufreq/barry_allen/sampling_down_factor
+echo "1036800" > /sys/devices/system/cpu/cpufreq/barry_allen/sync_freq
+echo "80" > /sys/devices/system/cpu/cpufreq/barry_allen/target_loads
+echo "30000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate
+echo "80000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack
+echo "1267200" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_freq
+echo "50" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_load
+echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked
+ 
+sleep 0.5s
+
+sync
+
 #Supersu
 /system/xbin/daemonsu --auto-daemon &
 
@@ -114,18 +137,44 @@ fi
 # Iniciar Zipalign
 /res/ext/zipalign.sh
 
-# Tweaks
+# Tweaks (Javilonas)
 echo "5" > /proc/sys/vm/laptop_mode
 echo "8" > /proc/sys/vm/page-cluster
+echo "3642" > /proc/sys/vm/min_free_kbytes
+
+# Zswap compresión y gestión (Javilonas)
 echo "50" > /sys/module/zswap/parameters/max_pool_percent
+echo "80" > /sys/module/zswap/parameters/max_compression_ratio
+
+# Máximo ahorro batería (Javilonas)
+echo "3000" > /proc/sys/vm/dirty_writeback_centisecs
+
+# Carga Rápida
+echo "1" > /sys/kernel/fast_charge/force_fast_charge
 
 sync
+
+sleep 0.2s
+
+chmod 777 /sys/module/lowmemorykiller/parameters/minfree
+echo "12288,15360,18432,21504,24576,30720" > /sys/module/lowmemorykiller/parameters/minfree
+chmod 0644 /sys/module/lowmemorykiller/parameters/minfree
+
+chmod 777 /sys/module/lowmemorykiller/parameters/adj
+echo "0,58,117,235,529,1000" > /sys/module/lowmemorykiller/parameters/adj
+chmod 0644 /sys/module/lowmemorykiller/parameters/adj
+
+sync
+
+sleep 0.2s
 
 stop thermal-engine
 /system/xbin/busybox run-parts /system/etc/init.d
 start thermal-engine
 
 sync
+
+sleep 0.2s
 
 # Now wait for the rom to finish booting up
 # (by checking for any android process)
