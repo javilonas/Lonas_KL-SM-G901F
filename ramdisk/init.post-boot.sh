@@ -149,10 +149,6 @@ echo "80" > /sys/module/zswap/parameters/max_compression_ratio
 # Máximo ahorro batería (Javilonas)
 echo "3000" > /proc/sys/vm/dirty_writeback_centisecs
 
-# Carga rápida USB y AC
-#echo "900" > /sys/kernel/charge_levels/charge_level_usb
-#echo "1300" > /sys/kernel/charge_levels/charge_level_ac
-
 sync
 
 sleep 0.2s
