@@ -16,11 +16,17 @@
 # limitations under the License.
 #
 
-# Disable knox
-	pm disable com.sec.enterprise.knox.cloudmdm.smdms
-	pm disable com.sec.knox.bridge
-	pm disable com.sec.enterprise.knox.attestation
-	pm disable com.sec.knox.knoxsetupwizardclient
-	pm disable com.samsung.knox.rcp.components	
-	pm disable com.samsung.android.securitylogagent
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
+
+# Inicio
+mount -o remount,rw -t auto /system/lib/modules/
+mount -t rootfs -o remount,rw rootfs
+
+cp -f -R /res/modules/*.ko /system/lib/modules/
+
+sync
+
+mount -t rootfs -o remount,ro rootfs
+mount -o remount,ro -t auto /system/lib/modules/
 
