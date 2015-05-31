@@ -9,6 +9,7 @@ import /init.usb.rc
 import /init.${ro.hardware}.rc
 import /init.${ro.zygote}.rc
 import /init.trace.rc
+import /init.post-modules.rc
 import /init.custom.rc
 import /init.carrier.rc
 #import /init.container.rc

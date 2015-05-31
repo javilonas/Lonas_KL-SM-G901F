@@ -1,7 +1,19 @@
 #!/bin/bash
 #
-# Build Script: Javilonas, 14-05-2015
-# Javilonas <admin@lonasdigital.com>
+# Copyright (c) 2015 Javier Sayago <admin@lonasdigital.com>
+# Contact: javilonas@esp-desarrolladores.com
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 
 start_time=`date +'%d/%m/%y %H:%M:%S'`
@@ -10,11 +22,21 @@ echo "#################### Eliminando Restos ####################"
 
 # Rutas
 export ROOTFS_PATH="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/ramdisk"
+export RAMFS_TMP="/home/lonas/Kernel_Lonas/tmp/ramfs-source-sgs5plus"
 export TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.8/bin/arm-eabi-"
 export TOOLBASE="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/buildtools"
 
 echo "#################### Preparando Entorno ####################"
-export KERNELDIR="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F"
+export KERNELDIR=`readlink -f .`
+export RAMFS_SOURCE=`readlink -f $KERNELDIR/ramdisk`
+export USE_SEC_FIPS_MODE=true
+
+echo "kerneldir = $KERNELDIR"
+echo "ramfs_source = $RAMFS_SOURCE"
+
+if [ "${1}" != "" ];then
+  export KERNELDIR=`readlink -f ${1}`
+fi
 
 export KERNEL_VERSION="Lonas-KL-0.2"
 export VERSION_KL="SM-G901F"
@@ -67,6 +89,8 @@ find . -type f -name '*.py' -exec chmod 755 {} \;
 find . -type f -name '*.sh' -exec chmod 755 {} \;
 find . -type f -name '*.pl' -exec chmod 755 {} \;
 
+echo "ramfs_tmp = $RAMFS_TMP"
+
 echo "#################### Deleting Previous Build ####################"
 make ARCH=arm CROSS_COMPILE=$TOOLCHAIN -j`grep 'processor' /proc/cpuinfo | wc -l` mrproper
 make ARCH=arm CROSS_COMPILE=$TOOLCHAIN -j`grep 'processor' /proc/cpuinfo | wc -l` clean
@@ -108,36 +132,62 @@ make ARCH=arm CROSS_COMPILE=$TOOLCHAIN -C $(pwd) O=output apq8084_sec_defconfig 
 
 #make ARCH=arm CROSS_COMPILE=$TOOLCHAIN -C $(pwd) O=output lonas_defconfig
 
+cp $KERNELDIR/output/.config arch/arm/configs/lonas_defconfig 
+
+nice -n 10 make -j7 ARCH=arm CROSS_COMPILE=$TOOLCHAIN -C $(pwd) O=output lonas_defconfig KCONFIG_VARIANT= KCONFIG_DEBUG= KCONFIG_LOG_SELINUX= KCONFIG_SELINUX= KCONFIG_TIMA= KCONFIG_DMVERITY=
+
 make -j`grep 'processor' /proc/cpuinfo | wc -l` ARCH=arm CROSS_COMPILE=$TOOLCHAIN -C $(pwd) O=output
 
-cp -f output/arch/arm/boot/Image $(pwd)/arch/arm/boot/zImage
-
-echo "#################### Build Ramdisk ####################"
 
 if [ ! -d $ROOTFS_PATH/system/lib/modules ]; then
         mkdir -p $ROOTFS_PATH/system/lib/modules
 fi
 
 find . -name '*.ko' -exec cp -av {} $ROOTFS_PATH/system/lib/modules/ \;
+#unzip $KERNELDIR/proprietary-modules/proprietary-modules.zip -d $ROOTFS_PATH/system/lib/modules/
 chmod 644 $ROOTFS_PATH/system/lib/modules/*
-${CROSS_COMPILE}strip --strip-unneeded $ROOTFS_PATH/system/lib/modules/*
+${CROSS_COMPILE}strip --strip-unneeded $ROOTFS_PATH/system/lib/modules/*.ko
 
-find $ROOTFS_PATH -name .EMPTY_DIRECTORY -exec rm -rf {} \;
+cp -f -R $ROOTFS_PATH/system/lib/modules/ $ROOTFS_PATH/res/
 
-cd ramdisk
-find . | fakeroot cpio -o -H newc | gzip > ../ramdisk.img
-cd ..
+cp -f output/arch/arm/boot/Image $(pwd)/arch/arm/boot/zImage
+
+echo "#################### Update Ramdisk ####################"
+cp -f output/arch/arm/boot/zImage .
+
+rm -rf $RAMFS_TMP
+rm -rf $RAMFS_TMP.cpio
+rm -rf $RAMFS_TMP.cpio.gz
+rm -rf $KERNELDIR/*.cpio
+rm -rf $KERNELDIR/*.cpio.gz
+cd $ROOTFS_PATH
+cp -ax $ROOTFS_PATH $RAMFS_TMP
+find $RAMFS_TMP -name .git -exec rm -rf {} \;
+find $RAMFS_TMP -name EMPTY_DIRECTORY -exec rm -rf {} \;
+find $RAMFS_TMP -name .EMPTY_DIRECTORY -exec rm -rf {} \;
+rm -rf $RAMFS_TMP/tmp/*
+rm -rf $RAMFS_TMP/.hg
+
+echo "#################### Build Ramdisk ####################"
+cd $RAMFS_TMP
+find . | fakeroot cpio -o -H newc | gzip > $KERNELDIR/ramdisk.img
+find . | fakeroot cpio -o -H newc > $RAMFS_TMP.cpio 2>/dev/null
+ls -lh $RAMFS_TMP.cpio
+gzip -9 -f $RAMFS_TMP.cpio
+
+cd $KERNELDIR
 
 echo "#################### Generar nueva dt image ####################"
 $TOOLBASE/dtbTool -o output/arch/arm/boot/dt.img -s 4096 -p output/scripts/dtc/ output/arch/arm/boot/dts/
 chmod a+r output/arch/arm/boot/dt.img
 
 echo "#################### Generar nuevo boot.img ####################"
-$TOOLBASE/mkbootimg --kernel output/arch/arm/boot/zImage --ramdisk ramdisk.img --cmdline 'console=null androidboot.hardware=qcom user_debug=23 msm_rtb.filter=0x3b7 dwc3_msm.cpu_to_affin=1' --base 0x00000000 --pagesize 4096 --kernel_offset 0x00008000 --ramdisk_offset 0x02600000 --tags_offset 0x02400000 --dt output/arch/arm/boot/dt.img -o boot.img
+$TOOLBASE/mkbootimg --kernel output/arch/arm/boot/zImage --ramdisk $RAMFS_TMP.cpio.gz --cmdline 'console=null androidboot.hardware=qcom user_debug=23 msm_rtb.filter=0x3b7 dwc3_msm.cpu_to_affin=1' --base 0x00000000 --pagesize 4096 --kernel_offset 0x00008000 --ramdisk_offset 0x02600000 --tags_offset 0x02400000 --dt output/arch/arm/boot/dt.img -o boot.img
 
 echo "Started  : $start_time"
 echo "Finished : `date +'%d/%m/%y %H:%M:%S'`"
 find . -name "boot.img"
+find . -name "ramdisk.img"
 find . -name "*.ko"
 
 echo "#################### Preparando flasheables ####################"
