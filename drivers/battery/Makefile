@@ -1,4 +1,4 @@
-obj-$(CONFIG_BATTERY_SAMSUNG)	+= sec_battery.o
+obj-$(CONFIG_BATTERY_SAMSUNG)	+= sec_battery.o sec_control.o
 ifeq ($(CONFIG_OF),y)
 obj-$(CONFIG_ARCH_MSM8974)		+= sec_board-msm8974.o
 obj-$(CONFIG_ARCH_MSM8226)		+= sec_board-msm8226.o
