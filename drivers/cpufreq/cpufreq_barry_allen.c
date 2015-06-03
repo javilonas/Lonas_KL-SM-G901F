@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Copyright (C) 2015 Javier Sayago <admin@lonasdigital.com>
  *
- * Barry_Allen Version 0.8
+ * Barry_Allen Version 0.9
  * Last Update >> 04-06-2015
  *
  * This software is licensed under the terms of the GNU General Public
@@ -713,7 +713,7 @@ static int cpufreq_barry_allen_notifier(
 	int cpu;
 	unsigned long flags;
 
-	if (val == CPUFREQ_POSTCHANGE) {
+	if (val == CPUFREQ_PRECHANGE) {
 		pcpu = &per_cpu(cpuinfo, freq->cpu);
 		if (!down_read_trylock(&pcpu->enable_sem))
 			return 0;
