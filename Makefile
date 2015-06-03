@@ -193,8 +193,8 @@ SUBARCH := $(shell uname -m | sed -e s/i.86/x86/ -e s/x86_64/x86/ \
 # Default value for CROSS_COMPILE is not to prefix executables
 # Note: Some architectures assign CROSS_COMPILE in their arch/*/Makefile
 export KBUILD_BUILDHOST := $(SUBARCH)
-ARCH		?=arm
-CROSS_COMPILE	?=/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.8/bin/arm-eabi-
+ARCH		?= $(SUBARCH)
+CROSS_COMPILE	?= $(CONFIG_CROSS_COMPILE:"%"=%)
 
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
@@ -245,7 +245,7 @@ GRAPHITE_FLAGS	= -fgraphite -floop-flatten -floop-parallelize-all \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -fgcse-las $(GRAPHITE_FLAGS)
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -fgcse-las -std=gnu89 $(GRAPHITE_FLAGS)
 HOSTCXXFLAGS = -O2
 
 # Decide whether to build built-in, modular, or both.
@@ -390,7 +390,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
  		   -Wno-sequence-point \
  		   -Wno-unused-function \
 		   -fno-delete-null-pointer-checks \
-		   $(GRAPHITE_FLAGS) $(KERNELFLAGS)
+		   -std=gnu89 $(GRAPHITE_FLAGS) $(KERNELFLAGS)
 
 # L1/L2 cache size parameters
 KBUILD_CFLAGS	+= --param l1-cache-size=32 --param l1-cache-line-size=32 --param l2-cache-size=1024
@@ -594,7 +594,7 @@ all: vmlinux
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
-KBUILD_CFLAGS	+= -O2
+KBUILD_CFLAGS	+= -O3
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
