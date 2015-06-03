@@ -23,12 +23,8 @@ export PATH
 mount -o remount,rw -t auto /system
 mount -t rootfs -o remount,rw rootfs
 
-if [ ! -f /system/xbin/busybox ]; then
-rm -rf /system/xbin/busybox
-fi
-
-if [ ! -f /system/bin/busybox ]; then
-rm -rf /system/bin/busybox
+if [ -f /system/xbin/busybox ]; then
+ln -s /system/xbin/busybox /sbin/busybox
 fi
 
 cp -f /sbin/busybox /system/xbin/busybox
@@ -134,6 +130,28 @@ sync
 #Supersu
 /system/xbin/daemonsu --auto-daemon &
 
+# Allow untrusted apps to read from debugfs (mitigate SELinux denials)
+/system/xbin/supolicy --live \
+	"allow untrusted_app debugfs file { open read getattr }" \
+	"allow untrusted_app sysfs_lowmemorykiller file { open read getattr }" \
+	"allow untrusted_app sysfs_devices_system_iosched file { open read getattr }" \
+	"allow untrusted_app persist_file dir { open read getattr }" \
+	"allow debuggerd gpu_device chr_file { open read getattr }" \
+	"allow netd netd capability fsetid" \
+	"allow netd { hostapd dnsmasq } process fork" \
+	"allow { system_app shell } dalvikcache_data_file file write" \
+	"allow { zygote mediaserver bootanim appdomain }  theme_data_file dir { search r_file_perms r_dir_perms }" \
+	"allow { zygote mediaserver bootanim appdomain }  theme_data_file file { r_file_perms r_dir_perms }" \
+	"allow system_server { rootfs resourcecache_data_file } dir { open read write getattr add_name setattr create remove_name rmdir unlink link }" \
+	"allow system_server resourcecache_data_file file { open read write getattr add_name setattr create remove_name unlink link }" \
+	"allow system_server dex2oat_exec file rx_file_perms" \
+	"allow mediaserver mediaserver_tmpfs file execute" \
+	"allow drmserver theme_data_file file r_file_perms" \
+	"allow zygote system_file file write" \
+	"allow atfwd property_socket sock_file write" \
+	"allow untrusted_app sysfs_display file { open read write getattr add_name setattr remove_name }" \
+	"allow debuggerd app_data_file dir search"
+
 # KNOX Off
 /res/ext/eliminar_knox.sh
 
@@ -156,14 +174,6 @@ fi
 # Tweaks (Javilonas)
 echo "5" > /proc/sys/vm/laptop_mode
 echo "8" > /proc/sys/vm/page-cluster
-echo "3642" > /proc/sys/vm/min_free_kbytes
-
-# Zswap compresión y gestión (Javilonas)
-echo "50" > /sys/module/zswap/parameters/max_pool_percent
-echo "80" > /sys/module/zswap/parameters/max_compression_ratio
-
-# Máximo ahorro batería (Javilonas)
-echo "3000" > /proc/sys/vm/dirty_writeback_centisecs
 
 # Carga Rápida
 echo "1" > /sys/kernel/fast_charge/force_fast_charge
@@ -172,12 +182,8 @@ sync
 
 sleep 0.2s
 
-chmod 777 /sys/module/lowmemorykiller/parameters/minfree
-echo "12288,15360,18432,21504,24576,30720" > /sys/module/lowmemorykiller/parameters/minfree
+# Fix permisos
 chmod 0644 /sys/module/lowmemorykiller/parameters/minfree
-
-chmod 777 /sys/module/lowmemorykiller/parameters/adj
-echo "0,58,117,235,529,1000" > /sys/module/lowmemorykiller/parameters/adj
 chmod 0644 /sys/module/lowmemorykiller/parameters/adj
 
 sync
