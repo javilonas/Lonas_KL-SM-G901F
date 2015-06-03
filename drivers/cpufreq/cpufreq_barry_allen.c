@@ -4,8 +4,8 @@
  * Copyright (C) 2010 Google, Inc.
  * Copyright (C) 2015 Javier Sayago <admin@lonasdigital.com>
  *
- * Barry_Allen Version 0.4
- * Last Update >> 22-05-2015
+ * Barry_Allen Version 0.8
+ * Last Update >> 04-06-2015
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
