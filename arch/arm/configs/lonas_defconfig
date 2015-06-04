@@ -32,7 +32,7 @@ CONFIG_BUILDTIME_EXTABLE_SORT=y
 # General setup
 #
 CONFIG_INIT_ENV_ARG_LIMIT=32
-CONFIG_CROSS_COMPILE="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.8/bin/arm-eabi-"
+CONFIG_CROSS_COMPILE="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.9/bin/arm-eabi-"
 CONFIG_LOCALVERSION="-$KERNEL_VERSION"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_HAVE_KERNEL_GZIP=y

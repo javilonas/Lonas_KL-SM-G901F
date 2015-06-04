@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.8/bin/arm-eabi-"
+TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.9/bin/arm-eabi-"
 DIR="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F"
 export KERNELDIR=`readlink -f .`
 
