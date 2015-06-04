@@ -23,6 +23,7 @@
 #include <linux/of.h>
 #include <linux/cpumask.h>
 #ifdef CONFIG_CPU_VOLTAGE_CONTROL
+#include <linux/sysfs_helpers.h>
 #include <linux/cpufreq.h>
 #endif
 #include <linux/clk/msm-clk-provider.h>

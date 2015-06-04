@@ -34,6 +34,9 @@
 #include <soc/qcom/cpufreq.h>
 #include <trace/events/power.h>
 #include <mach/msm_bus.h>
+#ifdef CONFIG_CPU_VOLTAGE_CONTROL
+#include <linux/sysfs_helpers.h>
+#endif
 
 #ifdef CONFIG_CPU_VOLTAGE_CONTROL
 static struct cpufreq_frequency_table *dts_freq_table;
