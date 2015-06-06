@@ -1,7 +1,9 @@
 /*
- * include/linux/input/doubletap2wake.h
+ * include/linux/input/sweep2sleep.h
  *
- * Copyright (c) 2013, Dennis Rassmann <showp1984@gmail.com>
+ * Copyright (c) 2015, Javier Sayago <admin@lonasdigital.com>
+ *
+ * Based in Sweep2wake by Dennis Rassmann <showp1984@gmail.com> 
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,14 +18,16 @@
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
  */
 
-#ifndef _LINUX_DOUBLETAP2WAKE_H
-#define _LINUX_DOUBLETAP2WAKE_H
+#ifndef _LINUX_SWEEP2SLEEP_H
+#define _LINUX_SWEEP2SLEEP_H
 
 #include <linux/input.h>
 
-extern bool dt2w_scr_suspended;
-extern int dt2w_switch;
+extern bool s2w_scr_suspend;
+extern int s2w_switch, s2w_s2sonly;
 
-#endif	/* _LINUX_DOUBLETAP2WAKE_H */
+#endif	/* _LINUX_SWEEP2SLEEP_H */
+

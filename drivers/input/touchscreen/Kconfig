@@ -1024,15 +1024,10 @@ config SEC_STRING_ENABLE
 
 	  If unsure, say N.
 
-config TOUCHSCREEN_SWEEP2WAKE
-       tristate "Sweep2Wake for touchscreens"
+config TOUCHSCREEN_SWEEP2SLEEP
+       tristate "Sweep2Sleep for touchscreens"
        select TOUCHSCREEN_PREVENT_SLEEP
        default y
-
-config TOUCHSCREEN_DOUBLETAP2WAKE
-        tristate "DoubleTap2Wake for touchscreens"
-        select TOUCHSCREEN_PREVENT_SLEEP
-        default y
 
 config TOUCHSCREEN_PREVENT_SLEEP
        bool "Inihibit sleep on modified touchscreen drivers"
