@@ -34,7 +34,6 @@
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
 #include <linux/input/sweep2wake.h>
-#include <linux/input/doubletap2wake.h>
 #endif
 
 #define DRIVER_NAME "synaptics_rmi4_i2c"
