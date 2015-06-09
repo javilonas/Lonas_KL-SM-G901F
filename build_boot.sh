@@ -23,7 +23,7 @@ echo "#################### Eliminando Restos ####################"
 # Rutas
 export ROOTFS_PATH="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/ramdisk"
 export RAMFS_TMP="/home/lonas/Kernel_Lonas/tmp/ramfs-source-sgs5plus"
-export TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.8/bin/arm-eabi-"
+export TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.9/bin/arm-eabi-"
 export TOOLBASE="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/buildtools"
 
 echo "#################### Preparando Entorno ####################"
@@ -38,7 +38,7 @@ if [ "${1}" != "" ];then
   export KERNELDIR=`readlink -f ${1}`
 fi
 
-export KERNEL_VERSION="Lonas-KL-0.2"
+export KERNEL_VERSION="Lonas-KL-0.3"
 export VERSION_KL="SM-G901F"
 export REVISION="RTM"
 

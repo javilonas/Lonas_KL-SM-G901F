@@ -32,6 +32,10 @@
 #include <linux/regulator/consumer.h>
 #include <linux/qpnp/pin.h>
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#include <linux/input/sweep2sleep.h>
+#endif
+
 #define DRIVER_NAME "synaptics_rmi4_i2c"
 
 #define SYNAPTICS_PM_GPIO_STATE_WAKE	0

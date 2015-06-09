@@ -982,6 +982,12 @@ config FORCE_FAST_CHARGE
 	  are detected as USB to charge as AC (1A/h) or to set
 	  custom charging currents for AC and USB.
 
+config CPU_VOLTAGE_CONTROL
+	bool "Userspace CPU Voltage Control"
+	default y
+ 	help
+	  This enables userspace CPU Voltage Control.
+
 config MSM_AVS_HW
 	bool "Enable Adaptive Voltage Scaling (AVS)"
 	default n
