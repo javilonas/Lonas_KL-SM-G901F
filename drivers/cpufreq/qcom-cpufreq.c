@@ -56,7 +56,6 @@ static unsigned int freq_index[NR_CPUS];
 static unsigned int max_freq_index;
 static struct cpufreq_frequency_table *freq_table;
 static unsigned int *l2_khz;
-static bool is_sync;
 static unsigned long *mem_bw;
 static bool hotplug_ready;
 
