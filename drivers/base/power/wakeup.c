@@ -14,9 +14,15 @@
 #include <linux/suspend.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
+#include <linux/moduleparam.h>
 #include <trace/events/power.h>
 
 #include "power.h"
+
+static bool enable_si_ws = false;
+module_param(enable_si_ws, bool, 0644);
+static bool enable_msm_hsic_ws = true;
+module_param(enable_msm_hsic_ws, bool, 0644);
 
 /*
  * If set, the suspend/hibernate code will abort transitions to a sleep state
@@ -387,6 +393,16 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	 * out of PM_SUSPEND_FREEZE state
 	 */
 	freeze_wake();
+
+	if (!enable_si_ws && !strcmp(ws->name, "sensor_ind")) {
+		pr_info("wakeup source sensor_ind activate skipped\n");
+		return;
+	}
+
+	if (!enable_msm_hsic_ws && !strcmp(ws->name, "msm_hsic_host")) {
+                pr_info("wakeup source msm_hsic_host activate skipped\n");
+                return;
+        }
 
 	ws->active = true;
 	ws->active_count++;
