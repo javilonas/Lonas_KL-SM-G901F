@@ -208,8 +208,17 @@ sync
 sleep 0.2s
 
 # Fix permisos
-chmod 0644 /sys/module/lowmemorykiller/parameters/minfree
-chmod 0644 /sys/module/lowmemorykiller/parameters/adj
+chmod 0664 /sys/module/lowmemorykiller/parameters/minfree
+chmod 0664 /sys/module/lowmemorykiller/parameters/adj
+
+chmod 0666 /sys/class/misc/rem_sound/rem_sound
+chmod 0666 /sys/class/misc/rem_sound/headphone_volume
+chmod 0666 /sys/class/misc/rem_sound/speaker_volume
+chmod 0666 /sys/class/misc/rem_sound/mic_level_general
+chmod 0666 /sys/class/misc/rem_sound/locked_attribute
+chmod 0666 /sys/class/misc/rem_sound/debug
+chmod 0666 /sys/class/misc/rem_sound/register_dump
+chmod 0666 /sys/class/misc/rem_sound/version
 
 sync
 
