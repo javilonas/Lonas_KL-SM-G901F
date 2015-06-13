@@ -144,7 +144,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	 * entered pm-suspend or screen-off state.
 	 */
 	if (suspended || power_suspended) {
-		*freq = devfreq->min_freq;
+		*freq = devfreq->profile->freq_table[devfreq->profile->max_state];
 		return 0;
 	}
 
