@@ -49,7 +49,7 @@
 
 /* Tuneables */
 #define S2W_DEBUG		0
-#define S2W_DEFAULT		1
+#define S2W_DEFAULT		0
 #define S2W_PWRKEY_DUR          60
 
 /* Screen size */
@@ -476,7 +476,7 @@ static void s2w_input_event(struct input_handle *handle, unsigned int type,
 
 static int input_dev_filter(struct input_dev *dev) {
 	if (strstr(dev->name, "touch") ||
-	    strstr(dev->name, "lge_touch_core")) {
+	    strstr(dev->name, "synaptics-rmi-ts")) {
 		return 0;
 	} else {
 		return 1;
