@@ -24,16 +24,41 @@ mount -o remount,rw -t auto /system
 mount -t rootfs -o remount,rw rootfs
 
 if [ -f /system/xbin/busybox ]; then
-ln -s /system/xbin/busybox /sbin/busybox
+	chown 0:2000 /system/xbin/busybox
+	chmod 0755 /system/xbin/busybox
+	/system/xbin/busybox --install -s /system/xbin
+	ln -s /system/xbin/busybox /sbin/busybox
+	ln -s /system/xbin/busybox /system/bin/busybox
+	sync
 fi
 
-cp -f /sbin/busybox /system/xbin/busybox
+# Set environment and create symlinks: /bin, /etc, /lib, and /etc/mtab
+set_environment ()
+{
+	# create /bin symlinks
+	if [ ! -e /bin ]; then
+		/system/xbin/busybox ln -s /system/bin /bin
+	fi
 
-/system/xbin/busybox --install -s /system/xbin
+	# create /etc symlinks
+	if [ ! -e /etc ]; then
+		/system/xbin/busybox ln -s /system/etc /etc
+	fi
 
-ln -s /system/xbin/busybox /system/bin/busybox
+	# create /lib symlinks
+	if [ ! -e /lib ]; then
+		/system/xbin/busybox ln -s /system/lib /lib
+	fi
 
-sync
+	# symlink /etc/mtab to /proc/self/mounts
+	if [ ! -e /system/etc/mtab ]; then
+		/system/xbin/busybox ln -s /proc/self/mounts /system/etc/mtab
+	fi
+}
+
+if [ -x /system/xbin/busybox ]; then
+	set_environment
+fi
 
 # barry_allen governor
 chown -R system:system /sys/devices/system/cpu/cpu0/cpufreq/barry_allen
@@ -183,8 +208,17 @@ sync
 sleep 0.2s
 
 # Fix permisos
-chmod 0644 /sys/module/lowmemorykiller/parameters/minfree
-chmod 0644 /sys/module/lowmemorykiller/parameters/adj
+chmod 0664 /sys/module/lowmemorykiller/parameters/minfree
+chmod 0664 /sys/module/lowmemorykiller/parameters/adj
+
+chmod 0666 /sys/class/misc/rem_sound/rem_sound
+chmod 0666 /sys/class/misc/rem_sound/headphone_volume
+chmod 0666 /sys/class/misc/rem_sound/speaker_volume
+chmod 0666 /sys/class/misc/rem_sound/mic_level_general
+chmod 0666 /sys/class/misc/rem_sound/locked_attribute
+chmod 0666 /sys/class/misc/rem_sound/debug
+chmod 0666 /sys/class/misc/rem_sound/register_dump
+chmod 0666 /sys/class/misc/rem_sound/version
 
 sync
 

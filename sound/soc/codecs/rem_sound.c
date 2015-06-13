@@ -1,7 +1,7 @@
 /*
- * Author Rem Sound: javilonas, 23.05.2015
+ * Author Rem Sound: javilonas, 11.06.2015
  * 
- * Version 1.3 to WCD9330 TomTom codec driver
+ * Version 1.4 to WCD9330 TomTom codec driver
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -14,7 +14,6 @@
  *
  */
 
-
 #include <sound/soc.h>
 #include <sound/core.h>
 
@@ -24,6 +23,7 @@
 #include <linux/kallsyms.h>
 
 #include <linux/delay.h>
+#include <linux/init.h>
 #include <linux/miscdevice.h>
 #include <linux/switch.h>
 #include <linux/version.h>
@@ -42,6 +42,11 @@
 #include <linux/jiffies.h>
 #include <linux/workqueue.h>
 
+/* Version, author, desc, etc */
+#define DRIVER_AUTHOR "Javier Sayago <admin@lonasdigital.com>"
+#define DRIVER_DESCRIPTION "Rem Sound to WCD9330 TomTom codec driver"
+#define DRIVER_VERSION "1.4"
+
 /*****************************************/
 // Variables
 /*****************************************/
@@ -49,14 +54,19 @@
 // pointer to codec structure
 static struct snd_soc_codec *codec;
 
-// internal rem sound variables
-static int rem_sound;	// rem sound master switch
-static int debug;			// debug switch
+//static int snd_ctrl_locked = 1;
 
-static int headphone_volume_l;
-static int headphone_volume_r;
-static int speaker_volume_l;
-static int speaker_volume_r;
+// internal rem sound variables
+static int rem_sound;                          // rem sound master switch
+static int debug;                              // debug switch
+
+static int headphone_volume_l;                 // headphone volume left
+static int headphone_volume_r;                 // headphone volume right
+
+static int speaker_volume_l;                   // speaker volume left
+static int speaker_volume_r;                   // speaker volume right
+
+static int mic_level;                          // internal mic level
 
 /*****************************************/
 // rem sound hook functions for
@@ -106,6 +116,11 @@ unsigned int rem_sound_hook_tomtom_write(unsigned int reg, unsigned int value)
 			break;
 		}
 
+		case TOMTOM_A_CDC_TX7_VOL_CTL_GAIN: // mic level general
+		{
+			value = mic_level;
+			break;
+		}
 		
 		default:
 			break;
@@ -126,6 +141,7 @@ static void reset_rem_sound(void)
 	headphone_volume_r = HEADPHONE_DEFAULT;
 	speaker_volume_l = SPEAKER_DEFAULT;
 	speaker_volume_r = SPEAKER_DEFAULT;
+	mic_level = MICLEVEL_DEFAULT;
 
 	if (debug)
 		printk("rem-sound: rem sound reset done\n");
@@ -140,6 +156,8 @@ static void reset_audio_hub(void)
 
 	tomtom_write_no_hook(codec, TOMTOM_A_CDC_RX3_VOL_CTL_B2_CTL, SPEAKER_DEFAULT + SPEAKER_REG_OFFSET);
 	tomtom_write_no_hook(codec, TOMTOM_A_CDC_RX7_VOL_CTL_B2_CTL, SPEAKER_DEFAULT + SPEAKER_REG_OFFSET);
+
+	tomtom_write_no_hook(codec, TOMTOM_A_CDC_TX7_VOL_CTL_GAIN, MICLEVEL_DEFAULT + MICLEVEL_REG_OFFSET);
 
 	if (debug)
 		printk("rem-sound: wcd9320 audio hub reset done\n");
@@ -247,7 +265,6 @@ static ssize_t headphone_volume_store(struct device *dev, struct device_attribut
 	return count;
 }
 
-
 // Speaker volume
 
 static ssize_t speaker_volume_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -305,6 +322,45 @@ static ssize_t speaker_volume_store(struct device *dev, struct device_attribute 
 	return count;
 }
 
+// Microphone level general
+static ssize_t mic_level_general_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "Mic level general %d\n", mic_level);
+}
+static ssize_t mic_level_general_store(struct device *dev, struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	unsigned int val;
+
+	// Terminate if rem sound is not enabled
+	if (!rem_sound)
+		return count;
+
+	// read value for mic level from input buffer
+	ret = sscanf(buf, "%d", &val);
+
+	if (ret != 1)
+		return -EINVAL;
+
+	// check whether values are within the valid ranges and adjust accordingly
+	if (val > MICLEVEL_MAX)
+		val = MICLEVEL_MAX;
+	if (val < MICLEVEL_MIN)
+		val = MICLEVEL_MIN;
+
+	// store new value
+	mic_level = val;
+		
+	// set new value
+	tomtom_write_no_hook(codec, TOMTOM_A_CDC_TX4_VOL_CTL_GAIN, 
+		mic_level + MICLEVEL_REG_OFFSET);
+
+	// print debug info
+	if (debug)
+		printk("Rem-sound: Mic level general %d\n", mic_level);
+	return count;
+}
 
 // Debug status
 
@@ -439,6 +495,27 @@ static ssize_t version_show(struct device *dev, struct device_attribute *attr, c
 	return sprintf(buf, "%s\n", REM_SOUND_VERSION);
 }
 
+// locked
+/*static ssize_t locked_store(struct kobject *kobj,
+                struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int inp;
+
+	sscanf(buf, "%d", &inp);
+
+	if (inp == 0)
+		snd_ctrl_locked = 0;
+	else
+		snd_ctrl_locked = 1;
+
+	return count;
+}
+
+static ssize_t locked_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%d\n", snd_ctrl_locked);
+}*/
+
 
 /*****************************************/
 // Initialize rem sound sysfs folder
@@ -448,6 +525,8 @@ static ssize_t version_show(struct device *dev, struct device_attribute *attr, c
 static DEVICE_ATTR(rem_sound, S_IRUGO | S_IWUGO, rem_sound_show, rem_sound_store);
 static DEVICE_ATTR(headphone_volume, S_IRUGO | S_IWUGO, headphone_volume_show, headphone_volume_store);
 static DEVICE_ATTR(speaker_volume, S_IRUGO | S_IWUGO, speaker_volume_show, speaker_volume_store);
+static DEVICE_ATTR(mic_level_general, S_IRUGO | S_IWUGO, mic_level_general_show, mic_level_general_store);
+//static DEVICE_ATTR(locked, S_IRUGO | S_IWUGO, locked_show, locked_store);
 static DEVICE_ATTR(debug, S_IRUGO | S_IWUGO, debug_show, debug_store);
 static DEVICE_ATTR(register_dump, S_IRUGO | S_IWUGO, register_dump_show, NULL);
 static DEVICE_ATTR(version, S_IRUGO | S_IWUGO, version_show, NULL);
@@ -457,6 +536,8 @@ static struct attribute *rem_sound_attributes[] = {
 	&dev_attr_rem_sound.attr,
 	&dev_attr_headphone_volume.attr,
 	&dev_attr_speaker_volume.attr,
+	&dev_attr_mic_level_general.attr,
+	//&dev_attr_locked.attr,
 	&dev_attr_debug.attr,
 	&dev_attr_register_dump.attr,
 	&dev_attr_version.attr,
@@ -518,3 +599,9 @@ static void rem_sound_exit(void)
 
 module_init(rem_sound_init);
 module_exit(rem_sound_exit);
+
+MODULE_AUTHOR(DRIVER_AUTHOR);
+MODULE_AUTHOR("Javier Sayago <admin@lonasdigital.com>");
+MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
+MODULE_VERSION(DRIVER_VERSION);
+MODULE_LICENSE("GPLv2");
