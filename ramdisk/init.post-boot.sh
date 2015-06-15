@@ -20,6 +20,7 @@ PATH=/sbin:/system/sbin:/system/bin:/system/xbin
 export PATH
 
 # Inicio
+mount -o remount,rw -t auto /
 mount -o remount,rw -t auto /system
 mount -t rootfs -o remount,rw rootfs
 
@@ -129,29 +130,6 @@ sleep 0.5s
 
 sync
 
-# Perfil consumo Medio
-echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked
-echo "20000" > /sys/devices/system/cpu/cpufreq/barry_allen/above_hispeed_delay
-echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/boost
-echo "" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse
-echo "80000" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse_duration
-echo "90" > /sys/devices/system/cpu/cpufreq/barry_allen/go_hispeed_load
-echo "1728000" > /sys/devices/system/cpu/cpufreq/barry_allen/hispeed_freq
-echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/io_is_busy
-echo "60000" > /sys/devices/system/cpu/cpufreq/barry_allen/min_sample_time
-echo "100000" > /sys/devices/system/cpu/cpufreq/barry_allen/sampling_down_factor
-echo "1036800" > /sys/devices/system/cpu/cpufreq/barry_allen/sync_freq
-echo "80" > /sys/devices/system/cpu/cpufreq/barry_allen/target_loads
-echo "30000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate
-echo "80000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack
-echo "1267200" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_freq
-echo "50" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_load
-echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked
- 
-sleep 0.5s
-
-sync
-
 #Supersu
 /system/xbin/daemonsu --auto-daemon &
 
@@ -182,7 +160,6 @@ sync
 
 # Detectar si existe el directorio en /system/etc y si no la crea. - by Javilonas
 #
-
 if [ ! -d "/system/etc/init.d" ] ; then
 mount -o remount,rw -t auto /system
 mkdir /system/etc/init.d
@@ -238,6 +215,19 @@ while ! pgrep android.process.acore ; do
   sleep 2
 done
 
+# Google play services wakelock fix
+sleep 40
+su -c "pm enable com.google.android.gms/.update.SystemUpdateActivity"
+su -c "pm enable com.google.android.gms/.update.SystemUpdateService"
+su -c "pm enable com.google.android.gms/.update.SystemUpdateService$ActiveReceiver"
+su -c "pm enable com.google.android.gms/.update.SystemUpdateService$Receiver"
+su -c "pm enable com.google.android.gms/.update.SystemUpdateService$SecretCodeReceiver"
+su -c "pm enable com.google.android.gsf/.update.SystemUpdateActivity"
+su -c "pm enable com.google.android.gsf/.update.SystemUpdatePanoActivity"
+su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
+su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
+su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
+
 mount -t rootfs -o remount,ro rootfs
 mount -o remount,ro -t auto /system
-
+mount -o remount,ro -t auto /
