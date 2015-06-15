@@ -2008,8 +2008,6 @@ source "drivers/cpufreq/Kconfig"
 
 source "drivers/cpuidle/Kconfig"
 
-source "drivers/cpuquiet/Kconfig"
-
 source "drivers/idle/Kconfig"
 
 endmenu
