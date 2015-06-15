@@ -129,29 +129,6 @@ sleep 0.5s
 
 sync
 
-# Perfil consumo Medio
-echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked
-echo "20000" > /sys/devices/system/cpu/cpufreq/barry_allen/above_hispeed_delay
-echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/boost
-echo "" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse
-echo "80000" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse_duration
-echo "90" > /sys/devices/system/cpu/cpufreq/barry_allen/go_hispeed_load
-echo "1728000" > /sys/devices/system/cpu/cpufreq/barry_allen/hispeed_freq
-echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/io_is_busy
-echo "60000" > /sys/devices/system/cpu/cpufreq/barry_allen/min_sample_time
-echo "100000" > /sys/devices/system/cpu/cpufreq/barry_allen/sampling_down_factor
-echo "1036800" > /sys/devices/system/cpu/cpufreq/barry_allen/sync_freq
-echo "80" > /sys/devices/system/cpu/cpufreq/barry_allen/target_loads
-echo "30000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate
-echo "80000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack
-echo "1267200" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_freq
-echo "50" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_load
-echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked
- 
-sleep 0.5s
-
-sync
-
 #Supersu
 /system/xbin/daemonsu --auto-daemon &
 
