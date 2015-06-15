@@ -38,7 +38,7 @@ if [ "${1}" != "" ];then
   export KERNELDIR=`readlink -f ${1}`
 fi
 
-export KERNEL_VERSION="Lonas-KL-0.4"
+export KERNEL_VERSION="Lonas-KL-0.5"
 export VERSION_KL="SM-G901F"
 export REVISION="RTM"
 
