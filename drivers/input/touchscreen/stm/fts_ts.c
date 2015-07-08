@@ -85,7 +85,12 @@ struct fts_touchkey fts_touchkeys[] = {
 };
 #endif
 
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2SLEEP
+#include <linux/input/sweep2sleep.h>
+#endif
+
 extern int get_lcd_attached(char*);
+
 extern int boot_mode_recovery;
 #ifdef CONFIG_SAMSUNG_LPM_MODE
 extern int poweroff_charging;
@@ -1221,20 +1226,24 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 			break;
 
 		case EVENTID_ENTER_POINTER:
-
-			if(info->fts_power_mode == FTS_POWER_STATE_LOWPOWER){
+			
+			// don't ignore events if the screen is off.
+			/*if(info->fts_power_mode == FTS_POWER_STATE_LOWPOWER){
 				break;
-			}
+			}*/
+				
+			//pr_info("[tsp] finger: %d IN\n", TouchID);
 
 			info->touch_count++;
 
 		case EVENTID_MOTION_POINTER:
 
-			if(info->fts_power_mode == FTS_POWER_STATE_LOWPOWER){
+            // don't ignore events if the screen is off.
+            /*if(info->fts_power_mode == FTS_POWER_STATE_LOWPOWER){
 				dev_err(&info->client->dev, "%s %d: low power mode\n", __func__, __LINE__);
 				fts_release_all_finger(info);
 				break;
-			}
+			}*/
 
 			if (info->touch_count == 0) {
 				dev_err(&info->client->dev, "%s %d: count 0\n", __func__, __LINE__);
@@ -1267,6 +1276,9 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 #else
 			z = data[7 + EventNum * FTS_EVENT_SIZE];
 #endif
+			//pr_info("[tsp] finger: %d, x: %d, y: %d, bw: %d, bh: %d, sum: %d, palm: %d\n",
+			//		TouchID, x, y, bw, bh, sumsize, palm);
+				
 			input_mt_slot(info->input_dev, TouchID);
 			input_mt_report_slot_state(info->input_dev,
 						   MT_TOOL_FINGER,
@@ -1295,10 +1307,13 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 			break;
 
 		case EVENTID_LEAVE_POINTER:
-
-			if(info->fts_power_mode == FTS_POWER_STATE_LOWPOWER){
+				
+			//pr_info("[tsp] finger: %d OUT\n", TouchID);
+				
+			// don't ignore events if the screen is off.
+			/*if(info->fts_power_mode == FTS_POWER_STATE_LOWPOWER){
 				break;
-			}
+            }*/
 
 			if (info->touch_count <= 0) {
 				dev_err(&info->client->dev, "%s %d: count 0\n", __func__, __LINE__);
@@ -1489,43 +1504,40 @@ static unsigned char fts_event_handler_type_b(struct fts_ts_info *info,
 #endif
 
 #if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
-		if (EventID == EVENTID_ENTER_POINTER)
-			dev_info(&info->client->dev,
+		if (EventID == EVENTID_ENTER_POINTER) {
+			/*dev_info(&info->client->dev,
 				"[P] tID:%d x:%d y:%d w:%d h:%d z:%d s:%d p:%d tc:%d tm:%d\n",
-				TouchID, x, y, bw, bh, z, sumsize, palm, info->touch_count, info->touch_mode);
-		else if (EventID == EVENTID_HOVER_ENTER_POINTER)
-			dev_info(&info->client->dev,
+				TouchID, x, y, bw, bh, z, sumsize, palm, info->touch_count, info->touch_mode);*/
+		} else if (EventID == EVENTID_HOVER_ENTER_POINTER) {
+			/*dev_info(&info->client->dev,
 				"[HP] tID:%d x:%d y:%d z:%d\n",
-				TouchID, x, y, z);
+				TouchID, x, y, z);*/
 #else
 		if (EventID == EVENTID_ENTER_POINTER) {
 			dev_info(&info->client->dev,
-				"[P] tID:%d loc:%c%c tc:%d tm:%d\n",
-				TouchID,
-				location_detect(info, y, 1), location_detect(info, x, 0),
-				info->touch_count, info->touch_mode);
-		}
-		else if (EventID == EVENTID_HOVER_ENTER_POINTER)
+				"[P] tID:%d tc:%d tm:%d\n",
+				TouchID, info->touch_count, info->touch_mode);
+		} else if (EventID == EVENTID_HOVER_ENTER_POINTER) {
 			dev_info(&info->client->dev,
 				"[HP] tID:%d\n", TouchID);
 #endif
-		else if (EventID == EVENTID_LEAVE_POINTER) {
+		} else if (EventID == EVENTID_LEAVE_POINTER) {
 #if !defined(CONFIG_SAMSUNG_PRODUCT_SHIP)
-			dev_info(&info->client->dev,
+			/*dev_info(&info->client->dev,
 				"[R] tID:%d mc: %d tc:%d lx:%d ly:%d Ver[%02X%04X%01X%01X%01X]\n",
 				TouchID, info->finger[TouchID].mcount, info->touch_count,
 				info->finger[TouchID].lx, info->finger[TouchID].ly,
 				info->panel_revision, info->fw_main_version_of_ic,
-				info->flip_enable, info->mshover_enabled, info->mainscr_disable);
+				info->flip_enable, info->mshover_enabled, info->mainscr_disable);*/
 #else
-			dev_info(&info->client->dev,
+			/*dev_info(&info->client->dev,
 				"[R] tID:%d loc:%c%c mc: %d tc:%d Ver[%02X%04X%01X%01X%01X]\n",
 				TouchID,
 				location_detect(info, info->finger[TouchID].ly, 1),
 				location_detect(info, info->finger[TouchID].lx, 0),
 				info->finger[TouchID].mcount, info->touch_count,
 				info->panel_revision, info->fw_main_version_of_ic,
-				info->flip_enable, info->mshover_enabled, info->mainscr_disable);
+				info->flip_enable, info->mshover_enabled, info->mainscr_disable);*/
 #endif
 			info->finger[TouchID].mcount = 0;
 		}/* else if (EventID == EVENTID_HOVER_LEAVE_POINTER) {
@@ -1711,7 +1723,7 @@ static int fts_irq_enable(struct fts_ts_info *info,
 			return retval;
 
 		retval = request_threaded_irq(info->irq, NULL,
-				fts_interrupt_handler, IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+				fts_interrupt_handler, IRQF_TRIGGER_LOW | IRQF_ONESHOT | IRQF_NO_SUSPEND,
 				FTS_TS_DRV_NAME, info);
 		if (retval < 0) {
 			dev_info(&info->client->dev,
@@ -2794,6 +2806,12 @@ static void fts_secure_touch_stop(struct fts_ts_info *info, int blocking)
 
 static int fts_stop_device(struct fts_ts_info *info)
 {
+	if (s2w_switch > 0) {
+		info->lowpower_mode = true;
+	} else {
+		info->lowpower_mode = false;
+	}
+	
 	dev_info(&info->client->dev, "%s %s\n",
 			__func__, info->lowpower_mode ? "enter low power mode" : "");
 

@@ -1,4 +1,4 @@
-CONFIG_CROSS_COMPILE="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.9/bin/arm-eabi-"
+CONFIG_CROSS_COMPILE="$TOOLCHAIN"
 CONFIG_LOCALVERSION="-$KERNEL_VERSION"
 # CONFIG_LOCALVERSION_AUTO is not set
 
