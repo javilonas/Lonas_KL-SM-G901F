@@ -288,7 +288,7 @@ $busy renice 19 `pidof smoothsystem.sh`
 
 sleep 0.3s
 
-/sbin/ext/killing.sh &
+/res/ext/killing.sh &
 
 sleep 0.3s
 
