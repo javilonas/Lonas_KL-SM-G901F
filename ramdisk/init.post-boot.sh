@@ -189,6 +189,8 @@ chmod 0664 /sys/module/lowmemorykiller/parameters/minfree
 chmod 0664 /sys/module/lowmemorykiller/parameters/adj
 
 chmod 0666 /sys/class/misc/rem_sound/rem_sound
+echo "1" > /sys/class/misc/rem_sound/rem_sound
+
 chmod 0666 /sys/class/misc/rem_sound/headphone_volume
 chmod 0666 /sys/class/misc/rem_sound/speaker_volume
 chmod 0666 /sys/class/misc/rem_sound/mic_level_general
@@ -201,6 +203,70 @@ sync
 
 sleep 0.2s
 
+# IPv6 privacy tweak
+echo "2" > /proc/sys/net/ipv6/conf/all/use_tempaddr
+
+# TCP tweaks
+echo "1" > /proc/sys/net/ipv4/tcp_low_latency
+echo "0" > /proc/sys/net/ipv4/tcp_timestamps
+echo "1" > /proc/sys/net/ipv4/tcp_tw_reuse
+echo "1" > /proc/sys/net/ipv4/tcp_sack
+echo "1" > /proc/sys/net/ipv4/tcp_dsack
+echo "1" > /proc/sys/net/ipv4/tcp_tw_recycle
+echo "1" > /proc/sys/net/ipv4/tcp_window_scaling
+echo "1" > /proc/sys/net/ipv4/tcp_moderate_rcvbuf
+echo "1" > /proc/sys/net/ipv4/route/flush
+echo "2" > /proc/sys/net/ipv4/tcp_syn_retries
+echo "2" > /proc/sys/net/ipv4/tcp_synack_retries
+echo "5" > /proc/sys/net/ipv4/tcp_keepalive_probes
+echo "10" > /proc/sys/net/ipv4/tcp_keepalive_intvl
+echo "10" > /proc/sys/net/ipv4/tcp_fin_timeout
+echo "2" > /proc/sys/net/ipv4/tcp_ecn
+echo "524388" > /proc/sys/net/core/wmem_max
+echo "524388" > /proc/sys/net/core/rmem_max
+echo "262144" > /proc/sys/net/core/rmem_default
+echo "262144" > /proc/sys/net/core/wmem_default
+echo "20480" > /proc/sys/net/core/optmem_max
+echo "6144 87380 524388" > /proc/sys/net/ipv4/tcp_wmem
+echo "6144 87380 524388" > /proc/sys/net/ipv4/tcp_rmem
+echo "4096" > /proc/sys/net/ipv4/udp_rmem_min
+echo "4096" > /proc/sys/net/ipv4/udp_wmem_min
+
+echo "50" > /sys/module/zswap/parameters/max_pool_percent
+
+# reduce txqueuelen to 0 to switch from a packet queue to a byte one
+NET=`ls -d /sys/class/net/*`
+for i in $NET 
+do
+echo "0" > $i/tx_queue_len
+
+done
+
+LOOP=`ls -d /sys/block/loop*`
+RAM=`ls -d /sys/block/ram*`
+MMC=`ls -d /sys/block/mmc*`
+ZSWA=`ls -d /sys/block/vnswap*`
+for j in $LOOP $RAM $MMC $ZSWA
+do 
+echo "0" > $j/queue/rotational
+echo "2048" > $j/queue/read_ahead_kb; 
+
+done
+
+echo "2048" > /sys/devices/virtual/bdi/179:0/read_ahead_kb;
+
+# Enable Dynamic FSync
+echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+
+# Enable KSM
+echo "1" > /sys/kernel/mm/ksm/run
+
+# Enable Intelli_Plug
+echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
+
+# Free Up More Ram For Apps
+echo "200" > /proc/sys/vm/vfs_cache_pressure
+
 stop thermal-engine
 /system/xbin/busybox run-parts /system/etc/init.d
 start thermal-engine
@@ -209,11 +275,80 @@ sync
 
 sleep 0.2s
 
+busy=/sbin/busybox;
+
+# Iniciar Liberar Memoria
+/res/ext/libera_ram.sh &
+$busy renice 19 `pidof libera_ram.sh`
+
+sleep 0.3s
+
+/res/ext/smoothsystem.sh &
+$busy renice 19 `pidof smoothsystem.sh`
+
+sleep 0.3s
+
+/sbin/ext/killing.sh &
+
+sleep 0.3s
+
+sync
+
+# lmk tweaks for fewer empty background processes
+minfree=7628,9768,11909,14515,16655,20469;
+lmk=/sys/module/lowmemorykiller/parameters/minfree;
+minboot=`cat $lmk`;
+while sleep 1; do
+  if [ `cat $lmk` != $minboot ]; then
+    [ `cat $lmk` != $minfree ] && echo $minfree > $lmk || exit;
+  fi;
+done &
+
+# wait for systemui and increase its priority
+while sleep 1; do
+  if [ `$busy pidof com.android.systemui` ]; then
+    systemui=`$busy pidof com.android.systemui`;
+    $busy renice -18 $systemui;
+    $busy echo -17 > /proc/$systemui/oom_adj;
+    $busy chmod 100 /proc/$systemui/oom_adj;
+    exit;
+  fi;
+done &
+
+# lmk whitelist for common launchers and increase launcher priority
+list="com.android.launcher com.android.launcher2 com.sec.android.app.launcher com.google.android.googlequicksearchbox org.adw.launcher org.adwfreak.launcher net.alamoapps.launcher com.anddoes.launcher com.android.lmt com.chrislacy.actionlauncher.pro com.cyanogenmod.trebuchet com.gau.go.launcherex com.gtp.nextlauncher com.miui.mihome2 com.mobint.hololauncher com.mobint.hololauncher.hd com.qihoo360.launcher com.teslacoilsw.launcher com.teslacoilsw.launcher.prime com.tsf.shell org.zeam";
+while sleep 60; do
+  for class in $list; do
+    if [ `$busy pgrep $class | head -n 1` ]; then
+      launcher=`$busy pgrep $class`;
+      $busy echo -17 > /proc/$launcher/oom_adj;
+      $busy chmod 100 /proc/$launcher/oom_adj;
+      $busy renice -18 $launcher;
+    fi;
+  done;
+  exit;
+done &
+
+# Fix para problemas Con aplicaciones
+$busy setprop ro.kernel.android.checkjni 0
+$busy setprop ro.HOME_APP_ADJ -17
+
+# Desactivar fast Dormancy
+$busy setprop ro.semc.enable.fast_dormancy false
+
+# Tiempo de escaneado wifi (ahorra + batería)
+$busy setprop wifi.supplicant_scan_interval 480
+
+$busy setprop dalvik.vm.lockprof.threshold 500
+
 # Now wait for the rom to finish booting up
 # (by checking for any android process)
 while ! pgrep android.process.acore ; do
   sleep 2
 done
+
+# kill radio logcat to sdcard
+$busy pkill -f "logcat -b radio -v time";
 
 # Google play services wakelock fix
 sleep 40
@@ -227,6 +362,9 @@ su -c "pm enable com.google.android.gsf/.update.SystemUpdatePanoActivity"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
+
+# -25mv
+echo "0 655 665 675 685 695 705 715 725 735 795 805 815 825 835 845 855 865 875 885 895 905 915 925 935 950 965 980 995 1010 1015 1030 1045" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
 
 mount -t rootfs -o remount,ro rootfs
 mount -o remount,ro -t auto /system
