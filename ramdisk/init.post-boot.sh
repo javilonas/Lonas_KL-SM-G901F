@@ -239,18 +239,6 @@ done
 
 echo "2048" > /sys/devices/virtual/bdi/179:0/read_ahead_kb;
 
-# Enable Dynamic FSync
-echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
-
-# Enable KSM
-echo "1" > /sys/kernel/mm/ksm/run
-
-# Enable Intelli_Plug
-echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
-
-# Free Up More Ram For Apps
-echo "200" > /proc/sys/vm/vfs_cache_pressure
-
 stop thermal-engine
 /system/xbin/busybox run-parts /system/etc/init.d
 start thermal-engine
@@ -339,8 +327,28 @@ su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
 
+sleep 10
+
+# Enable Dynamic FSync
+echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+
+# Enable KSM
+echo "1" > /sys/kernel/mm/ksm/run
+
+# Enable Intelli_Plug
+echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
+
+# Free Up More Ram For Apps
+echo "200" > /proc/sys/vm/vfs_cache_pressure
+
+# Enable Simple GPU algorithm.
+echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+
+sleep 10
+
 # -50mv (Ahorro batería ON)
 echo "575 630 640 650 660 670 680 690 700 710 770 780 790 800 810 820 830 840 850 860 870 880 890 900 910 925 940 955 970 985 990 1005 1020" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
+
 
 mount -t rootfs -o remount,ro rootfs
 mount -o remount,ro -t auto /system
