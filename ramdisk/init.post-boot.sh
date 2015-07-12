@@ -130,6 +130,29 @@ sleep 0.5s
 
 sync
 
+# Profile battery extreme
+echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked 
+echo "20000 1400000:40000 1700000:20000" > /sys/devices/system/cpu/cpufreq/barry_allen/above_hispeed_delay 
+echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/boost 
+echo "" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse 
+echo "80000" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse_duration 
+echo "100" > /sys/devices/system/cpu/cpufreq/barry_allen/go_hispeed_load 
+echo "300000" > /sys/devices/system/cpu/cpufreq/barry_allen/hispeed_freq 
+echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/io_is_busy 
+echo "5000" > /sys/devices/system/cpu/cpufreq/barry_allen/min_sample_time 
+echo "100000" > /sys/devices/system/cpu/cpufreq/barry_allen/sampling_down_factor 
+echo "1036800" > /sys/devices/system/cpu/cpufreq/barry_allen/sync_freq 
+echo "85 900000:90 1200000:70" > /sys/devices/system/cpu/cpufreq/barry_allen/target_loads 
+echo "100000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate 
+echo "20000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack 
+echo "1190400" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_freq 
+echo "50" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_load 
+echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked 
+ 
+sleep 0.5s
+
+sync
+
 #Supersu
 /system/xbin/daemonsu --auto-daemon &
 
@@ -229,10 +252,14 @@ echo "262144" > /proc/sys/net/core/wmem_default
 echo "20480" > /proc/sys/net/core/optmem_max
 echo "6144 87380 524388" > /proc/sys/net/ipv4/tcp_wmem
 echo "6144 87380 524388" > /proc/sys/net/ipv4/tcp_rmem
-echo "4096" > /proc/sys/net/ipv4/udp_rmem_min
-echo "4096" > /proc/sys/net/ipv4/udp_wmem_min
+echo "6144" > /proc/sys/net/ipv4/udp_rmem_min
+echo "6144" > /proc/sys/net/ipv4/udp_wmem_min
 
 echo "50" > /sys/module/zswap/parameters/max_pool_percent
+
+sleep 0.5s
+
+sync
 
 # reduce txqueuelen to 0 to switch from a packet queue to a byte one
 NET=`ls -d /sys/class/net/*`
@@ -241,6 +268,10 @@ do
 echo "0" > $i/tx_queue_len
 
 done
+
+sleep 0.5s
+
+sync
 
 LOOP=`ls -d /sys/block/loop*`
 RAM=`ls -d /sys/block/ram*`
@@ -255,6 +286,10 @@ done
 
 echo "2048" > /sys/devices/virtual/bdi/179:0/read_ahead_kb;
 
+sleep 0.5s
+
+sync
+
 # Enable Dynamic FSync
 echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
 
@@ -266,6 +301,13 @@ echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
 
 # Free Up More Ram For Apps
 echo "200" > /proc/sys/vm/vfs_cache_pressure
+
+# Enable Simple GPU algorithm.
+echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+
+sleep 0.5s
+
+sync
 
 stop thermal-engine
 /system/xbin/busybox run-parts /system/etc/init.d
@@ -363,8 +405,9 @@ su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
 
-# -25mv
-echo "0 655 665 675 685 695 705 715 725 735 795 805 815 825 835 845 855 865 875 885 895 905 915 925 935 950 965 980 995 1010 1015 1030 1045" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
+# -25mv (Ahorro batería ON)
+echo "600 655 665 675 685 695 705 715 725 735 795 805 815 825 835 845 855 865 875 885 895 905 915 925 935 950 965 980 995 1010 1015 1030 1045" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
+
 
 mount -t rootfs -o remount,ro rootfs
 mount -o remount,ro -t auto /system
