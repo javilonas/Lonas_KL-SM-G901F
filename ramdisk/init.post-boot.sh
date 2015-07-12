@@ -226,6 +226,53 @@ sync
 
 sleep 0.2s
 
+# IPv6 privacy tweak
+echo "2" > /proc/sys/net/ipv6/conf/all/use_tempaddr
+
+# TCP tweaks
+echo "1" > /proc/sys/net/ipv4/tcp_low_latency
+echo "0" > /proc/sys/net/ipv4/tcp_timestamps
+echo "1" > /proc/sys/net/ipv4/tcp_tw_reuse
+echo "1" > /proc/sys/net/ipv4/tcp_sack
+echo "1" > /proc/sys/net/ipv4/tcp_dsack
+echo "1" > /proc/sys/net/ipv4/tcp_tw_recycle
+echo "1" > /proc/sys/net/ipv4/tcp_window_scaling
+echo "1" > /proc/sys/net/ipv4/tcp_moderate_rcvbuf
+echo "1" > /proc/sys/net/ipv4/route/flush
+echo "2" > /proc/sys/net/ipv4/tcp_syn_retries
+echo "2" > /proc/sys/net/ipv4/tcp_synack_retries
+echo "5" > /proc/sys/net/ipv4/tcp_keepalive_probes
+echo "10" > /proc/sys/net/ipv4/tcp_keepalive_intvl
+echo "10" > /proc/sys/net/ipv4/tcp_fin_timeout
+echo "2" > /proc/sys/net/ipv4/tcp_ecn
+echo "524388" > /proc/sys/net/core/wmem_max
+echo "524388" > /proc/sys/net/core/rmem_max
+echo "262144" > /proc/sys/net/core/rmem_default
+echo "262144" > /proc/sys/net/core/wmem_default
+echo "20480" > /proc/sys/net/core/optmem_max
+echo "6144 87380 524388" > /proc/sys/net/ipv4/tcp_wmem
+echo "6144 87380 524388" > /proc/sys/net/ipv4/tcp_rmem
+echo "6144" > /proc/sys/net/ipv4/udp_rmem_min
+echo "6144" > /proc/sys/net/ipv4/udp_wmem_min
+
+echo "50" > /sys/module/zswap/parameters/max_pool_percent
+
+sleep 0.5s
+
+sync
+
+# reduce txqueuelen to 0 to switch from a packet queue to a byte one
+NET=`ls -d /sys/class/net/*`
+for i in $NET 
+do
+echo "0" > $i/tx_queue_len
+
+done
+
+sleep 0.5s
+
+sync
+
 LOOP=`ls -d /sys/block/loop*`
 RAM=`ls -d /sys/block/ram*`
 MMC=`ls -d /sys/block/mmc*`
@@ -238,6 +285,29 @@ echo "2048" > $j/queue/read_ahead_kb;
 done
 
 echo "2048" > /sys/devices/virtual/bdi/179:0/read_ahead_kb;
+
+sleep 0.5s
+
+sync
+
+# Enable Dynamic FSync
+echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+
+# Enable KSM
+echo "1" > /sys/kernel/mm/ksm/run
+
+# Enable Intelli_Plug
+echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
+
+# Free Up More Ram For Apps
+echo "200" > /proc/sys/vm/vfs_cache_pressure
+
+# Enable Simple GPU algorithm.
+echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+
+sleep 0.5s
+
+sync
 
 stop thermal-engine
 /system/xbin/busybox run-parts /system/etc/init.d
@@ -305,6 +375,14 @@ done &
 $busy setprop ro.kernel.android.checkjni 0
 $busy setprop ro.HOME_APP_ADJ -17
 
+# Desactivar fast Dormancy
+$busy setprop ro.semc.enable.fast_dormancy false
+
+# Tiempo de escaneado wifi (ahorra + batería)
+$busy setprop wifi.supplicant_scan_interval 480
+
+$busy setprop dalvik.vm.lockprof.threshold 500
+
 # Now wait for the rom to finish booting up
 # (by checking for any android process)
 while ! pgrep android.process.acore ; do
@@ -313,25 +391,6 @@ done
 
 # kill radio logcat to sdcard
 $busy pkill -f "logcat -b radio -v time";
-
-sleep 5
-
-# Enable Dynamic FSync
-echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
-
-# Enable KSM
-echo "1" > /sys/kernel/mm/ksm/run
-
-# Enable Intelli_Plug
-echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
-
-# Free Up More Ram For Apps
-echo "200" > /proc/sys/vm/vfs_cache_pressure
-
-# Enable Simple GPU algorithm.
-echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
-
-sleep 5
 
 # Google play services wakelock fix
 sleep 40
