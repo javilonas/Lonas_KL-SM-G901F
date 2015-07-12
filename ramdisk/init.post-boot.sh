@@ -130,6 +130,29 @@ sleep 0.5s
 
 sync
 
+# Profile battery extreme
+echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked 
+echo "20000 1400000:40000 1700000:20000" > /sys/devices/system/cpu/cpufreq/barry_allen/above_hispeed_delay 
+echo "0" > /sys/devices/system/cpu/cpufreq/barry_allen/boost 
+echo "" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse 
+echo "80000" > /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse_duration 
+echo "100" > /sys/devices/system/cpu/cpufreq/barry_allen/go_hispeed_load 
+echo "300000" > /sys/devices/system/cpu/cpufreq/barry_allen/hispeed_freq 
+echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/io_is_busy 
+echo "5000" > /sys/devices/system/cpu/cpufreq/barry_allen/min_sample_time 
+echo "100000" > /sys/devices/system/cpu/cpufreq/barry_allen/sampling_down_factor 
+echo "1036800" > /sys/devices/system/cpu/cpufreq/barry_allen/sync_freq 
+echo "85 900000:90 1200000:70" > /sys/devices/system/cpu/cpufreq/barry_allen/target_loads 
+echo "100000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate 
+echo "20000" > /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack 
+echo "1190400" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_freq 
+echo "50" > /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_load 
+echo "1" > /sys/devices/system/cpu/cpufreq/barry_allen/ba_locked 
+ 
+sleep 0.5s
+
+sync
+
 #Supersu
 /system/xbin/daemonsu --auto-daemon &
 
@@ -202,45 +225,6 @@ chmod 0666 /sys/class/misc/rem_sound/version
 sync
 
 sleep 0.2s
-
-# IPv6 privacy tweak
-echo "2" > /proc/sys/net/ipv6/conf/all/use_tempaddr
-
-# TCP tweaks
-echo "1" > /proc/sys/net/ipv4/tcp_low_latency
-echo "0" > /proc/sys/net/ipv4/tcp_timestamps
-echo "1" > /proc/sys/net/ipv4/tcp_tw_reuse
-echo "1" > /proc/sys/net/ipv4/tcp_sack
-echo "1" > /proc/sys/net/ipv4/tcp_dsack
-echo "1" > /proc/sys/net/ipv4/tcp_tw_recycle
-echo "1" > /proc/sys/net/ipv4/tcp_window_scaling
-echo "1" > /proc/sys/net/ipv4/tcp_moderate_rcvbuf
-echo "1" > /proc/sys/net/ipv4/route/flush
-echo "2" > /proc/sys/net/ipv4/tcp_syn_retries
-echo "2" > /proc/sys/net/ipv4/tcp_synack_retries
-echo "5" > /proc/sys/net/ipv4/tcp_keepalive_probes
-echo "10" > /proc/sys/net/ipv4/tcp_keepalive_intvl
-echo "10" > /proc/sys/net/ipv4/tcp_fin_timeout
-echo "2" > /proc/sys/net/ipv4/tcp_ecn
-echo "524388" > /proc/sys/net/core/wmem_max
-echo "524388" > /proc/sys/net/core/rmem_max
-echo "262144" > /proc/sys/net/core/rmem_default
-echo "262144" > /proc/sys/net/core/wmem_default
-echo "20480" > /proc/sys/net/core/optmem_max
-echo "6144 87380 524388" > /proc/sys/net/ipv4/tcp_wmem
-echo "6144 87380 524388" > /proc/sys/net/ipv4/tcp_rmem
-echo "4096" > /proc/sys/net/ipv4/udp_rmem_min
-echo "4096" > /proc/sys/net/ipv4/udp_wmem_min
-
-echo "50" > /sys/module/zswap/parameters/max_pool_percent
-
-# reduce txqueuelen to 0 to switch from a packet queue to a byte one
-NET=`ls -d /sys/class/net/*`
-for i in $NET 
-do
-echo "0" > $i/tx_queue_len
-
-done
 
 LOOP=`ls -d /sys/block/loop*`
 RAM=`ls -d /sys/block/ram*`
@@ -333,14 +317,6 @@ done &
 $busy setprop ro.kernel.android.checkjni 0
 $busy setprop ro.HOME_APP_ADJ -17
 
-# Desactivar fast Dormancy
-$busy setprop ro.semc.enable.fast_dormancy false
-
-# Tiempo de escaneado wifi (ahorra + batería)
-$busy setprop wifi.supplicant_scan_interval 480
-
-$busy setprop dalvik.vm.lockprof.threshold 500
-
 # Now wait for the rom to finish booting up
 # (by checking for any android process)
 while ! pgrep android.process.acore ; do
@@ -363,8 +339,8 @@ su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
 
-# -25mv
-echo "0 655 665 675 685 695 705 715 725 735 795 805 815 825 835 845 855 865 875 885 895 905 915 925 935 950 965 980 995 1010 1015 1030 1045" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
+# -50mv (Ahorro batería ON)
+echo "575 630 640 650 660 670 680 690 700 710 770 780 790 800 810 820 830 840 850 860 870 880 890 900 910 925 940 955 970 985 990 1005 1020" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
 
 mount -t rootfs -o remount,ro rootfs
 mount -o remount,ro -t auto /system
