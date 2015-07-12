@@ -314,20 +314,7 @@ done
 # kill radio logcat to sdcard
 $busy pkill -f "logcat -b radio -v time";
 
-# Google play services wakelock fix
-sleep 40
-su -c "pm enable com.google.android.gms/.update.SystemUpdateActivity"
-su -c "pm enable com.google.android.gms/.update.SystemUpdateService"
-su -c "pm enable com.google.android.gms/.update.SystemUpdateService$ActiveReceiver"
-su -c "pm enable com.google.android.gms/.update.SystemUpdateService$Receiver"
-su -c "pm enable com.google.android.gms/.update.SystemUpdateService$SecretCodeReceiver"
-su -c "pm enable com.google.android.gsf/.update.SystemUpdateActivity"
-su -c "pm enable com.google.android.gsf/.update.SystemUpdatePanoActivity"
-su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
-su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
-su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
-
-sleep 10
+sleep 5
 
 # Enable Dynamic FSync
 echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
@@ -344,10 +331,23 @@ echo "200" > /proc/sys/vm/vfs_cache_pressure
 # Enable Simple GPU algorithm.
 echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
 
-sleep 10
+sleep 5
 
-# -50mv (Ahorro batería ON)
-echo "575 630 640 650 660 670 680 690 700 710 770 780 790 800 810 820 830 840 850 860 870 880 890 900 910 925 940 955 970 985 990 1005 1020" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
+# Google play services wakelock fix
+sleep 40
+su -c "pm enable com.google.android.gms/.update.SystemUpdateActivity"
+su -c "pm enable com.google.android.gms/.update.SystemUpdateService"
+su -c "pm enable com.google.android.gms/.update.SystemUpdateService$ActiveReceiver"
+su -c "pm enable com.google.android.gms/.update.SystemUpdateService$Receiver"
+su -c "pm enable com.google.android.gms/.update.SystemUpdateService$SecretCodeReceiver"
+su -c "pm enable com.google.android.gsf/.update.SystemUpdateActivity"
+su -c "pm enable com.google.android.gsf/.update.SystemUpdatePanoActivity"
+su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
+su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
+su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
+
+# -25mv (Ahorro batería ON)
+echo "600 655 665 675 685 695 705 715 725 735 795 805 815 825 835 845 855 865 875 885 895 905 915 925 935 950 965 980 995 1010 1015 1030 1045" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
 
 
 mount -t rootfs -o remount,ro rootfs
