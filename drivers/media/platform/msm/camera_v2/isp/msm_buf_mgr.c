@@ -48,8 +48,11 @@ struct msm_isp_bufq *msm_isp_get_bufq(
 	struct msm_isp_bufq *bufq = NULL;
 	unsigned long flags;
 	uint32_t bufq_index = bufq_handle & 0xFF;
-	if (bufq_index > buf_mgr->num_buf_q)
-		return bufq;
+
+	/* bufq_handle cannot be 0 */
+	if ((bufq_handle == 0) ||
+		(bufq_index > buf_mgr->num_buf_q))
+		return NULL;
 
 	spin_lock_irqsave(&buf_mgr->lock, flags);
 	bufq = &buf_mgr->bufq[bufq_index];
