@@ -1664,7 +1664,7 @@ on property:persist.security.tlc.tui=1
   setprop persist.security.tlc.tui 0
 
 on property:sys.boot_completed=1
-    write /sys/block/mmcblk0/queue/scheduler row
+    write /sys/block/mmcblk0/queue/scheduler bfq
 
 service sysprof /system/bin/sysprof -f /data/local/tmp/.sysprofctrl -o /data/local/tmp/.sysprofreport -c /data/local/tmp/sysprofconf
     class main
