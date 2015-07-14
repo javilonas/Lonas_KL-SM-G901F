@@ -61,22 +61,6 @@ if [ -x /system/xbin/busybox ]; then
 	set_environment
 fi
 
-# Enable Dynamic FSync
-echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
-
-# Enable KSM
-echo "1" > /sys/kernel/mm/ksm/run
-
-# Enable Intelli_Plug
-echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
-
-# Enable Simple GPU algorithm.
-echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
-
-sleep 0.5s
-
-sync
-
 # barry_allen governor
 chown -R system:system /sys/devices/system/cpu/cpu0/cpufreq/barry_allen
 chmod -R 0666 /sys/devices/system/cpu/cpu0/cpufreq/barry_allen
@@ -210,7 +194,7 @@ sleep 0.2s
 chmod 0664 /sys/module/lowmemorykiller/parameters/minfree
 chmod 0664 /sys/module/lowmemorykiller/parameters/adj
 
-chmod 0666 /sys/class/misc/rem_sound/rem_sound
+chmod 0777 /sys/class/misc/rem_sound/rem_sound
 echo "1" > /sys/class/misc/rem_sound/rem_sound
 
 chmod 0666 /sys/class/misc/rem_sound/headphone_volume
@@ -277,6 +261,47 @@ sync
 
 sleep 0.2s
 
+
+busy=/sbin/busybox;
+
+# lmk tweaks for fewer empty background processes
+minfree=7628,9768,11909,14515,16655,20469;
+lmk=/sys/module/lowmemorykiller/parameters/minfree;
+minboot=`cat $lmk`;
+while sleep 1; do
+  if [ `cat $lmk` != $minboot ]; then
+    [ `cat $lmk` != $minfree ] && echo $minfree > $lmk || exit;
+  fi;
+done &
+
+sleep 0.5s
+
+sync
+
+# Enable Dynamic FSync
+chmod 0777 /sys/kernel/dyn_fsync/Dyn_fsync_active
+echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+chmod 0664 /sys/kernel/dyn_fsync/Dyn_fsync_active
+
+# Enable KSM
+chmod 0777 /sys/kernel/mm/ksm/run
+echo "1" > /sys/kernel/mm/ksm/run
+chmod 0664 /sys/kernel/mm/ksm/run
+
+# Enable Intelli_Plug
+chmod 0777 /sys/module/intelli_plug/parameters/intelli_plug_active
+echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
+chmod 0664 /sys/module/intelli_plug/parameters/intelli_plug_active
+
+# Enable Simple GPU algorithm.
+chmod 0777 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+chmod 0664 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+
+sleep 0.5s
+
+sync
+
 # Now wait for the rom to finish booting up
 # (by checking for any android process)
 while ! pgrep android.process.acore ; do
@@ -295,19 +320,6 @@ su -c "pm enable com.google.android.gsf/.update.SystemUpdatePanoActivity"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
-
-
-busy=/sbin/busybox;
-
-# lmk tweaks for fewer empty background processes
-minfree=7628,9768,11909,14515,16655,20469;
-lmk=/sys/module/lowmemorykiller/parameters/minfree;
-minboot=`cat $lmk`;
-while sleep 1; do
-  if [ `cat $lmk` != $minboot ]; then
-    [ `cat $lmk` != $minfree ] && echo $minfree > $lmk || exit;
-  fi;
-done &
 
 
 mount -t rootfs -o remount,ro rootfs
