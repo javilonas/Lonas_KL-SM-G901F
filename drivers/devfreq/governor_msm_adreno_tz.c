@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -57,25 +57,6 @@ static DEFINE_SPINLOCK(tz_lock);
 #define TZ_INIT_ID		0x6
 
 #define TAG "msm_adreno_tz: "
-
-/* Trap into the TrustZone, and call funcs there. */
-static int __secure_tz_reset_entry2(unsigned int *scm_data, u32 size_scm_data,
-                                       bool is_64)
-{
-       int ret;
-       /* sync memory before sending the commands to tz*/
-       __iowmb();
-       if (!is_64) {
-               spin_lock(&tz_lock);
-               ret = scm_call_atomic2(SCM_SVC_IO, TZ_RESET_ID, scm_data[0],
-                                       scm_data[1]);
-               spin_unlock(&tz_lock);
-       } else {
-               ret = scm_call(SCM_SVC_DCVS, TZ_RESET_ID_64, scm_data,
-                               size_scm_data, NULL, 0);
-       }
-       return ret;
-}
 
 /* Boolean to detect if pm has entered suspend mode */
 static bool suspended = false;
@@ -163,7 +144,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	 * entered pm-suspend or screen-off state.
 	 */
 	if (suspended || power_suspended) {
-		*freq = devfreq->profile->freq_table[devfreq->profile->max_state];
+		*freq = devfreq->profile->freq_table[devfreq->profile->max_state - 1];
 		return 0;
 	}
 
@@ -205,6 +186,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	}
 
 	level = devfreq_get_freq_level(devfreq, stats.current_frequency);
+
 	if (level < 0) {
 		pr_err(TAG "bad freq %ld\n", stats.current_frequency);
 		return level;
@@ -384,16 +366,8 @@ static int tz_resume(struct devfreq *devfreq)
 static int tz_suspend(struct devfreq *devfreq)
 {
 	struct devfreq_msm_adreno_tz_data *priv = devfreq->data;
-	struct devfreq_dev_profile *profile = devfreq->profile;
-	unsigned long freq;
-        unsigned int scm_data[2] = {0, 0};
-        __secure_tz_reset_entry2(scm_data, sizeof(scm_data), priv->is_64);
 
 	suspended = true;
-
-	freq = profile->initial_freq;
-
-	profile->target(devfreq->dev.parent, &freq, 0);
 
 	__secure_tz_entry2(TZ_RESET_ID, 0, 0);
 
