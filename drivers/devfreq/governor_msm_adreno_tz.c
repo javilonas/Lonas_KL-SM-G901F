@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -144,7 +144,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	 * entered pm-suspend or screen-off state.
 	 */
 	if (suspended || power_suspended) {
-		*freq = devfreq->profile->freq_table[devfreq->profile->max_state];
+		*freq = devfreq->profile->freq_table[devfreq->profile->max_state - 1];
 		return 0;
 	}
 
@@ -186,6 +186,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	}
 
 	level = devfreq_get_freq_level(devfreq, stats.current_frequency);
+
 	if (level < 0) {
 		pr_err(TAG "bad freq %ld\n", stats.current_frequency);
 		return level;
@@ -226,7 +227,7 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 	if (val) {
 		level += val;
 		level = max(level, 0);
-		level = min_t(int, level, devfreq->profile->max_state);
+		level = min_t(int, level, devfreq->profile->max_state - 1);
 		goto clear;
 	}
 
@@ -365,14 +366,8 @@ static int tz_resume(struct devfreq *devfreq)
 static int tz_suspend(struct devfreq *devfreq)
 {
 	struct devfreq_msm_adreno_tz_data *priv = devfreq->data;
-	struct devfreq_dev_profile *profile = devfreq->profile;
-	unsigned long freq;
 
 	suspended = true;
-
-	freq = profile->initial_freq;
-
-	profile->target(devfreq->dev.parent, &freq, 0);
 
 	__secure_tz_entry2(TZ_RESET_ID, 0, 0);
 
