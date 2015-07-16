@@ -21,8 +21,10 @@ export PATH
 
 # Inicio
 mount -o remount,rw -t auto /
-mount -o remount,rw -t auto /system
 mount -t rootfs -o remount,rw rootfs
+mount -o remount,rw -t auto /system
+mount -o remount,rw /data
+mount -o remount,rw /cache
 
 if [ -f /system/xbin/busybox ]; then
 	chown 0:2000 /system/xbin/busybox
@@ -179,6 +181,23 @@ fi
 # Iniciar Zipalign
 /res/ext/zipalign.sh
 
+# Iniciar Wifi Sleeper
+/res/ext/Wifi_sleeper.sh
+
+# Iniciar Kernel Sleepers
+/res/ext/Kernel_sleepers.sh
+
+# Kernel panic setup
+if [ -e /proc/sys/kernel/panic_on_oops ]; then 
+	echo "0" > /proc/sys/kernel/panic_on_oops
+fi
+if [ -e /proc/sys/kernel/panic ]; then 
+	echo "0" > /proc/sys/kernel/panic
+fi
+if [ -e /proc/sys/vm/panic_on_oom ]; then 
+	 echo "0" > /proc/sys/vm/panic_on_oom
+fi
+
 # Tweaks (Javilonas)
 echo "5" > /proc/sys/vm/laptop_mode
 echo "8" > /proc/sys/vm/page-cluster
@@ -209,25 +228,50 @@ sync
 
 sleep 0.2s
 
-# IPv6 privacy tweak
-echo "2" > /proc/sys/net/ipv6/conf/all/use_tempaddr
-
-# TCP tweaks
-echo "1" > /proc/sys/net/ipv4/tcp_low_latency
-echo "0" > /proc/sys/net/ipv4/tcp_timestamps
-echo "1" > /proc/sys/net/ipv4/tcp_tw_reuse
-echo "1" > /proc/sys/net/ipv4/tcp_sack
-echo "1" > /proc/sys/net/ipv4/tcp_dsack
-echo "1" > /proc/sys/net/ipv4/tcp_tw_recycle
-echo "1" > /proc/sys/net/ipv4/tcp_window_scaling
-echo "1" > /proc/sys/net/ipv4/tcp_moderate_rcvbuf
-echo "1" > /proc/sys/net/ipv4/route/flush
-echo "2" > /proc/sys/net/ipv4/tcp_syn_retries
-echo "2" > /proc/sys/net/ipv4/tcp_synack_retries
-echo "5" > /proc/sys/net/ipv4/tcp_keepalive_probes
-echo "10" > /proc/sys/net/ipv4/tcp_keepalive_intvl
-echo "10" > /proc/sys/net/ipv4/tcp_fin_timeout
-echo "2" > /proc/sys/net/ipv4/tcp_ecn
+# Tweaks Net
+chmod 0777 /proc/sys/net/*
+sysctl -e -w net.unix.max_dgram_qlen=50
+sysctl -e -w net.ipv4.tcp_moderate_rcvbuf=1
+sysctl -e -w net.ipv4.route.flush=1
+sysctl -e -w net.ipv4.udp_rmem_min=6144
+sysctl -e -w net.ipv4.udp_wmem_min=6144
+sysctl -e -w net.ipv4.tcp_rfc1337=1
+sysctl -e -w net.ipv4.ip_no_pmtu_disc=0
+sysctl -e -w net.ipv4.tcp_ecn=0
+sysctl -e -w net.ipv4.tcp_timestamps=0
+sysctl -e -w net.ipv4.tcp_sack=1
+sysctl -e -w net.ipv4.tcp_dsack=1
+sysctl -e -w net.ipv4.tcp_low_latency=1
+sysctl -e -w net.ipv4.tcp_fack=1
+sysctl -e -w net.ipv4.tcp_window_scaling=1
+sysctl -e -w net.ipv4.tcp_tw_recycle=1
+sysctl -e -w net.ipv4.tcp_tw_reuse=1
+sysctl -e -w net.ipv4.tcp_congestion_control=cubic
+sysctl -e -w net.ipv4.tcp_syncookies=1
+sysctl -e -w net.ipv4.tcp_synack_retries=2
+sysctl -e -w net.ipv4.tcp_syn_retries=2
+sysctl -e -w net.ipv4.tcp_max_syn_backlog=1024
+sysctl -e -w net.ipv4.tcp_max_tw_buckets=16384
+sysctl -e -w net.ipv4.icmp_echo_ignore_all=1
+sysctl -e -w net.ipv4.icmp_echo_ignore_broadcasts=1
+sysctl -e -w net.ipv4.icmp_ignore_bogus_error_responses=1
+sysctl -e -w net.ipv4.tcp_no_metrics_save=1
+sysctl -e -w net.ipv4.tcp_fin_timeout=15
+sysctl -e -w net.ipv4.tcp_keepalive_intvl=30
+sysctl -e -w net.ipv4.tcp_keepalive_probes=5
+sysctl -e -w net.ipv4.tcp_keepalive_time=1800
+sysctl -e -w net.ipv4.ip_forward=0
+sysctl -e -w net.ipv4.conf.all.send_redirects=0
+sysctl -e -w net.ipv4.conf.default.send_redirects=0
+sysctl -e -w net.ipv4.conf.all.rp_filter=1
+sysctl -e -w net.ipv4.conf.default.rp_filter=1
+sysctl -e -w net.ipv4.conf.all.accept_source_route=0
+sysctl -e -w net.ipv4.conf.default.accept_source_route=0 
+sysctl -e -w net.ipv4.conf.all.accept_redirects=0
+sysctl -e -w net.ipv4.conf.default.accept_redirects=0
+sysctl -e -w net.ipv4.conf.all.secure_redirects=0
+sysctl -e -w net.ipv4.conf.default.secure_redirects=0
+chmod 0644 /proc/sys/net/*
 
 echo "50" > /sys/module/zswap/parameters/max_pool_percent
 
@@ -235,19 +279,31 @@ sleep 0.5s
 
 sync
 
-LOOP=`ls -d /sys/block/loop*`
-RAM=`ls -d /sys/block/ram*`
-MMC=`ls -d /sys/block/mmc*`
-ZSWA=`ls -d /sys/block/vnswap*`
+# IO_tweak
+LOOP=`ls -d /sys/block/loop* 2>/dev/null`
+RAM=`ls -d /sys/block/ram* 2>/dev/null`
+MMC=`ls -d /sys/block/mmc* 2>/dev/null`
+ZSWA=`ls -d /sys/block/vnswap* 2>/dev/null`
 for j in $LOOP $RAM $MMC $ZSWA
 do 
-echo "0" > $j/queue/rotational
-echo "2048" > $j/queue/read_ahead_kb; 
-
+	if [ -e $j/queue/rotational ]; then
+		echo "0" > $j/queue/rotational
+	fi
+	if [ -e $j/queue/iostats ]; then
+		echo "0" > $j/queue/iostats
+	fi
+	if [ -e $j/queue/nr_requests ]; then
+		echo "1024" > $j/queue/nr_requests
+	fi
+	if [ -e $j/queue/read_ahead_kb ]; then
+		echo "2048" > $j/queue/read_ahead_kb
+	fi
+	if [ -e $j/bdi/read_ahead_kb ]; then
+		echo "2048" > $j/bdi/read_ahead_kb
+        fi
 done
 
-echo "2048" > /sys/devices/virtual/bdi/179:0/read_ahead_kb;
-
+echo "2048" > /sys/devices/virtual/bdi/179:0/read_ahead_kb
 
 sleep 0.5s
 
@@ -283,10 +339,12 @@ chmod 0777 /sys/kernel/dyn_fsync/Dyn_fsync_active
 echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
 chmod 0664 /sys/kernel/dyn_fsync/Dyn_fsync_active
 
-# Enable KSM
-chmod 0777 /sys/kernel/mm/ksm/run
+# Enable KSM and optimice Tweaks
+chmod 0777 /sys/kernel/mm/ksm/*
 echo "1" > /sys/kernel/mm/ksm/run
-chmod 0664 /sys/kernel/mm/ksm/run
+echo "512" > /sys/kernel/mm/ksm/pages_to_scan
+echo "1000" > /sys/kernel/mm/ksm/sleep_millisecs
+chmod 0664 /sys/kernel/mm/ksm/*
 
 # Enable Intelli_Plug
 chmod 0777 /sys/module/intelli_plug/parameters/intelli_plug_active
@@ -297,6 +355,22 @@ chmod 0664 /sys/module/intelli_plug/parameters/intelli_plug_active
 chmod 0777 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
 echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
 chmod 0664 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+
+# Debug level
+if [ -e /sys/module/lowmemorykiller/parameters/debug_level ]; then
+    chmod 0777 /sys/module/lowmemorykiller/parameters/debug_level
+    echo "0" > /sys/module/lowmemorykiller/parameters/debug_level
+    chmod 0644 /sys/module/lowmemorykiller/parameters/debug_level
+  fi
+
+# enlarger seeder
+chmod 0777 /proc/sys/kernel/random/read_wakeup_threshold
+echo "256" > /proc/sys/kernel/random/read_wakeup_threshold
+chmod 0644 /proc/sys/kernel/random/read_wakeup_threshold
+
+chmod 0777 /proc/sys/kernel/random/write_wakeup_threshold
+echo "1376" > /proc/sys/kernel/random/write_wakeup_threshold
+chmod 0644 /proc/sys/kernel/random/write_wakeup_threshold
 
 sleep 0.5s
 
@@ -321,7 +395,14 @@ su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
 
+# -15mv (Mini Ahorro batería ON)
+chmod 0777 /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
+echo "590 645 655 665 675 685 695 705 715 725 785 795 805 815 825 835 845 855 865 875 885 895 905 915 925 940 955 970 985 1000 1005 1020 1035" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
+chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
 
+
+mount -o remount,ro -t auto /
 mount -t rootfs -o remount,ro rootfs
 mount -o remount,ro -t auto /system
-mount -o remount,ro -t auto /
+mount -o remount,rw /data
+mount -o remount,rw /cache
