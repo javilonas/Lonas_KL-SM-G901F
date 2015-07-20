@@ -386,9 +386,26 @@ chmod 0777 /proc/sys/kernel/random/read_wakeup_threshold
 echo "256" > /proc/sys/kernel/random/read_wakeup_threshold
 chmod 0644 /proc/sys/kernel/random/read_wakeup_threshold
 
+# Tweaks Memory
 chmod 0777 /proc/sys/kernel/random/write_wakeup_threshold
 echo "1376" > /proc/sys/kernel/random/write_wakeup_threshold
 chmod 0644 /proc/sys/kernel/random/write_wakeup_threshold
+
+chmod 0777 /proc/sys/vm/vfs_cache_pressure
+echo "200" /proc/sys/vm/vfs_cache_pressure
+chmod 0644 /proc/sys/vm/vfs_cache_pressure
+
+chmod 0777 /proc/sys/vm/min_free_kbyte
+echo "8192" /proc/sys/vm/min_free_kbytes
+chmod 0644 /proc/sys/vm/min_free_kbyte
+
+chmod 0777 /proc/sys/vm/dirty_expire_centisecs
+echo "300" /proc/sys/vm/dirty_expire_centisecs
+chmod 0644 /proc/sys/vm/dirty_expire_centisecs
+
+chmod 0777 /proc/sys/vm/dirty_writeback_centisecs
+echo "1500" /proc/sys/vm/dirty_writeback_centisecs
+chmod 0644 /proc/sys/vm/dirty_writeback_centisecs
 
 sleep 0.5s
 
