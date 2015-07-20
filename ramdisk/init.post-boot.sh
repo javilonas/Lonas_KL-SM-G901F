@@ -63,6 +63,18 @@ if [ -x /system/xbin/busybox ]; then
 	set_environment
 fi
 
+#Set CPU Min Frequencies
+echo 300000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+echo 300000 > /sys/devices/system/cpu/cpu1/cpufreq/scaling_min_freq
+echo 300000 > /sys/devices/system/cpu/cpu2/cpufreq/scaling_min_freq
+echo 300000 > /sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq
+
+#Set CPU Max Frequencies
+echo 2649600 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+echo 2649600 > /sys/devices/system/cpu/cpu1/cpufreq/scaling_max_freq
+echo 2649600 > /sys/devices/system/cpu/cpu2/cpufreq/scaling_max_freq
+echo 2649600 > /sys/devices/system/cpu/cpu3/cpufreq/scaling_max_freq
+
 # barry_allen governor
 chown -R system:system /sys/devices/system/cpu/cpu0/cpufreq/barry_allen
 chmod -R 0666 /sys/devices/system/cpu/cpu0/cpufreq/barry_allen
@@ -354,6 +366,7 @@ chmod 0664 /sys/module/intelli_plug/parameters/intelli_plug_active
 # Enable zen_decision.
 chmod 0777 /sys/kernel/zen_decision/enabled
 chmod "1" /sys/kernel/zen_decision/enabled
+echo "500" > /sys/kernel/zen_decision/wake_wait_time
 chmod 0664 /sys/kernel/zen_decision/enabled
 
 # Enable Simple GPU algorithm.
@@ -399,11 +412,6 @@ su -c "pm enable com.google.android.gsf/.update.SystemUpdatePanoActivity"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
-
-# -15mv (Mini Ahorro batería ON)
-chmod 0777 /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
-echo "590 645 655 665 675 685 695 705 715 725 785 795 805 815 825 835 845 855 865 875 885 895 905 915 925 940 955 970 985 1000 1005 1020 1035" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
-chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
 
 
 mount -o remount,ro -t auto /
