@@ -351,6 +351,11 @@ chmod 0777 /sys/module/intelli_plug/parameters/intelli_plug_active
 echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
 chmod 0664 /sys/module/intelli_plug/parameters/intelli_plug_active
 
+# Enable zen_decision.
+chmod 0777 /sys/kernel/zen_decision/enabled
+chmod "1" /sys/kernel/zen_decision/enabled
+chmod 0664 /sys/kernel/zen_decision/enabled
+
 # Enable Simple GPU algorithm.
 chmod 0777 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
 echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
