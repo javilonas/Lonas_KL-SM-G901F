@@ -30,7 +30,7 @@
 #include "q6voice.h"
 
 #if defined(CONFIG_MACH_TRLTE_EUR) && defined(CONFIG_SND_DSPG_DBMD2)
-extern int system_rev;
+extern int unsigned system_rev;
 #endif
 
 static struct msm_voice voice_info[VOICE_SESSION_INDEX_MAX];
