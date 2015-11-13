@@ -163,7 +163,7 @@ extern bool ap_fw_loaded;
 
 #include <linux/moduleparam.h>
 
-static int wl_divide = 1;
+static int wl_divide = 4;
 module_param(wl_divide, int, 0644);
 
 /* Maximum STA per radio */
