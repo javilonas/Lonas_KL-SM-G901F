@@ -89,31 +89,6 @@ chown -R system:system /sys/devices/system/cpu/cpu3/cpufreq/barry_allen
 chmod -R 0666 /sys/devices/system/cpu/cpu3/cpufreq/barry_allen
 chmod 0755 /sys/devices/system/cpu/cpu3/cpufreq/barry_allen
 
-# Asegurar Governor for Default
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/min_sample_time
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/min_sample_time
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/hispeed_freq
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/hispeed_freq
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/target_loads
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/target_loads
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/go_hispeed_load
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/go_hispeed_load
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/above_hispeed_delay
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/above_hispeed_delay
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/boost
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/boost
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/input_boost
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/input_boost
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse_duration
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse_duration
-chown system system /sys/devices/system/cpu/cpufreq/barry_allen/io_is_busy
-chmod 0660 /sys/devices/system/cpu/cpufreq/barry_allen/io_is_busy
-
 chmod 777 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 echo "barry_allen" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor # CPU0
 chmod -h 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
@@ -139,6 +114,57 @@ chmod -h 0664 /sys/devices/system/cpu/cpu2/cpufreq/scaling_governor
 chmod 777 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
 write /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor "barry_allen"
 chmod -h 0664 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+
+chmod 777 /dev/cpuctl/apps/cpu.notify_on_migrate
+echo 0 > /dev/cpuctl/apps/cpu.notify_on_migrate
+chmod -h 0644 /dev/cpuctl/apps/cpu.notify_on_migrate
+
+chown -h system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+chown -h system /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+chown -h root.system /sys/devices/system/cpu/cpu1/online
+chown -h root.system /sys/devices/system/cpu/cpu2/online
+chown -h root.system /sys/devices/system/cpu/cpu3/online
+chmod -h 664 /sys/devices/system/cpu/cpu1/online
+chmod -h 664 /sys/devices/system/cpu/cpu2/online
+chmod -h 664 /sys/devices/system/cpu/cpu3/online
+
+# Change barry_allen sysfs permission
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/min_sample_time
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/hispeed_freq
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/target_loads
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/go_hispeed_load
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/above_hispeed_delay
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/boost
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse_duration
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/io_is_busy
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/sampling_down_factor
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/sync_freq
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_freq
+chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_load
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/timer_slack
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/min_sample_time
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/hispeed_freq
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/target_loads
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/go_hispeed_load
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/above_hispeed_delay
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/boost
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/boostpulse_duration
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/io_is_busy
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/sampling_down_factor
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/sync_freq
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_freq
+chmod -h 0644 /sys/devices/system/cpu/cpufreq/barry_allen/up_threshold_any_cpu_load
+
+# Permissions for Audio
+chown system.system /sys/devices/fe1af000.slim/es705-codec-gen0/keyword_grammar_path
+chown system.system /sys/devices/fe1af000.slim/es705-codec-gen0/keyword_net_path
+chown system.system /sys/devices/fe1af000.slim/es704-codec-gen0/keyword_grammar_path
+chown system.system /sys/devices/fe1af000.slim/es704-codec-gen0/keyword_net_path
 
 sleep 0.5s
 
@@ -169,32 +195,39 @@ sync
 	"allow untrusted_app sysfs_display file { open read write getattr add_name setattr remove_name }" \
 	"allow debuggerd app_data_file dir search"
 
-#/res/ext/killing.sh
-
 sleep 0.3s
 
 sync
 
-# Detectar si existe el directorio en /system/etc y si no la crea. - by Javilonas
-#
-if [ ! -d "/system/etc/init.d" ] ; then
-mount -o remount,rw -t auto /system
-mkdir /system/etc/init.d
-chmod 0755 /system/etc/init.d/*
-mount -o remount,ro -t auto /system
-fi
+# init.d
+chmod 755 /system/etc/init.d/ -R
+if [ ! -d /system/etc/init.d ]; then
+mkdir -p /system/etc/init.d/;
+chown -R root.root /system/etc/init.d;
+chmod 777 /system/etc/init.d/;
+else
+/sbin/busybox run-parts /system/etc/init.d
+fi;
+
+sync
+
+#Set default values on boot
+echo "200000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
+echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
+
+sync
 
 # Iniciar SQlite
-#/res/ext/sqlite.sh
+/res/ext/sqlite.sh
 
 # Iniciar Zipalign
-#/res/ext/zipalign.sh
+/res/ext/zipalign.sh
 
 # Iniciar Wifi Sleeper
-#/res/ext/Wifi_sleeper.sh
+/res/ext/Wifi_sleeper.sh
 
 # Iniciar Kernel Sleepers
-#/res/ext/Kernel_sleepers.sh
+/res/ext/Kernel_sleepers.sh
 
 # Kernel panic setup
 if [ -e /proc/sys/kernel/panic_on_oops ]; then 
@@ -222,6 +255,32 @@ sleep 0.2s
 chmod 0664 /sys/module/lowmemorykiller/parameters/minfree
 chmod 0664 /sys/module/lowmemorykiller/parameters/adj
 
+# RemSound
+chown system.system /sys/class/misc/rem_sound/rem_sound
+chmod -h 0666 /sys/class/misc/rem_sound/rem_sound
+echo "1" > /sys/class/misc/rem_sound/rem_sound
+
+chown system.system /sys/class/misc/rem_sound/headphone_volume
+chmod -h 0666 /sys/class/misc/rem_sound/headphone_volume
+
+chown system.system /sys/class/misc/rem_sound/speaker_volume
+chmod -h 0666 /sys/class/misc/rem_sound/speaker_volume
+
+chown system.system /sys/class/misc/rem_sound/mic_level_general
+chmod -h 0666 /sys/class/misc/rem_sound/mic_level_general
+
+chown system.system /sys/class/misc/rem_sound/locked_attribute
+chmod -h 0666 /sys/class/misc/rem_sound/locked_attribute
+
+chown system.system /sys/class/misc/rem_sound/debug
+chmod -h 0666 /sys/class/misc/rem_sound/debug
+
+chown system.system /sys/class/misc/rem_sound/register_dump
+chmod -h 0666 /sys/class/misc/rem_sound/register_dump
+
+chown system.system /sys/class/misc/rem_sound/version
+chmod -h 0666 /sys/class/misc/rem_sound/version
+
 sync
 
 sleep 0.2s
@@ -238,7 +297,7 @@ RAM=`ls -d /sys/block/ram* 2>/dev/null`
 MMC=`ls -d /sys/block/mmc* 2>/dev/null`
 ZSWA=`ls -d /sys/block/vnswap* 2>/dev/null`
 for j in $LOOP $RAM $MMC $ZSWA
-do 
+do
 	if [ -e $j/queue/rotational ]; then
 		echo "0" > $j/queue/rotational
 	fi
@@ -253,7 +312,7 @@ do
 	fi
 	if [ -e $j/bdi/read_ahead_kb ]; then
 		echo "2048" > $j/bdi/read_ahead_kb
-        fi
+	fi
 done
 
 echo "2048" > /sys/devices/virtual/bdi/179:0/read_ahead_kb
@@ -278,21 +337,49 @@ minfree=7628,9768,11909,14515,16655,20469;
 lmk=/sys/module/lowmemorykiller/parameters/minfree;
 minboot=`cat $lmk`;
 while sleep 1; do
-  if [ `cat $lmk` != $minboot ]; then
-    [ `cat $lmk` != $minfree ] && echo $minfree > $lmk || exit;
-  fi;
+	if [ `cat $lmk` != $minboot ]; then
+		[ `cat $lmk` != $minfree ] && echo $minfree > $lmk || exit;
+	fi;
 done &
 
 sleep 0.5s
 
 sync
 
+# Enable Dynamic FSync
+chmod 0777 /sys/kernel/dyn_fsync/Dyn_fsync_active
+echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+chmod 0664 /sys/kernel/dyn_fsync/Dyn_fsync_active
+
+# Enable KSM and optimice Tweaks
+chmod 0777 /sys/kernel/mm/ksm/*
+echo "1" > /sys/kernel/mm/ksm/run
+echo "512" > /sys/kernel/mm/ksm/pages_to_scan
+echo "1000" > /sys/kernel/mm/ksm/sleep_millisecs
+chmod 0664 /sys/kernel/mm/ksm/*
+
+# Enable Intelli_Plug
+chmod 0777 /sys/module/intelli_plug/parameters/intelli_plug_active
+echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
+chmod 0664 /sys/module/intelli_plug/parameters/intelli_plug_active
+
+# Enable zen_decision.
+chmod 0777 /sys/kernel/zen_decision/enabled
+chmod "1" /sys/kernel/zen_decision/enabled
+echo "500" > /sys/kernel/zen_decision/wake_wait_time
+chmod 0664 /sys/kernel/zen_decision/enabled
+
+# Enable Simple GPU algorithm.
+chmod 0777 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+chmod 0664 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+
 # Debug level
 if [ -e /sys/module/lowmemorykiller/parameters/debug_level ]; then
-    chmod 0777 /sys/module/lowmemorykiller/parameters/debug_level
-    echo "0" > /sys/module/lowmemorykiller/parameters/debug_level
-    chmod 0644 /sys/module/lowmemorykiller/parameters/debug_level
-  fi
+	chmod 0777 /sys/module/lowmemorykiller/parameters/debug_level
+	echo "0" > /sys/module/lowmemorykiller/parameters/debug_level
+	chmod 0644 /sys/module/lowmemorykiller/parameters/debug_level
+fi
 
 # enlarger seeder
 chmod 0777 /proc/sys/kernel/random/read_wakeup_threshold
@@ -327,7 +414,7 @@ sync
 # Now wait for the rom to finish booting up
 # (by checking for any android process)
 while ! pgrep android.process.acore ; do
-  sleep 2
+	sleep 2
 done
 
 # Google play services wakelock fix
