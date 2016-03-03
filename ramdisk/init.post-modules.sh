@@ -21,12 +21,24 @@ export PATH
 
 # Inicio
 mount -o remount,rw -t auto /system/lib/modules/
+mount -o remount,rw -t auto /system/etc/wifi/
+mount -o remount,rw -t auto /system/etc/firmware/wlan/qca_cld/
 mount -t rootfs -o remount,rw rootfs
 
 cp -f -R /res/modules/*.ko /system/lib/modules/
-
 sync
+cp -f -R /res/etc/firmware/wlan/qca_cld/WCNSS_cfg.dat /system/etc/firmware/wlan/qca_cld/
+cp -f -R /res/etc/firmware/wlan/qca_cld/*.ini /system/etc/firmware/wlan/qca_cld/
+cp -f -R /res/etc/firmware/wlan/qca_cld/*.bin /system/etc/firmware/wlan/qca_cld/
+sync
+cp -f -R /res/etc/wifi/*.conf /system/etc/wifi/
+cp -f -R /res/etc/wifi/*.ini /system/etc/wifi/
+cp -f -R /res/etc/wifi/*.bin /system/etc/wifi/
+sync
+sed -i s/560/480/ /system/build.prop
 
 mount -t rootfs -o remount,ro rootfs
+mount -o remount,rw -t auto /system/etc/firmware/wlan/qca_cld/
+mount -o remount,rw -t auto /system/etc/wifi/
 mount -o remount,ro -t auto /system/lib/modules/
 

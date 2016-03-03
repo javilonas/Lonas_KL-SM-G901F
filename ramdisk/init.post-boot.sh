@@ -1,6 +1,6 @@
 #!/system/bin/sh
 #
-# Copyright (c) 2015 Javier Sayago <admin@lonasdigital.com>
+# Copyright (c) 2016 Javier Sayago <admin@lonasdigital.com>
 # Contact: javilonas@esp-desarrolladores.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -139,7 +139,7 @@ chmod -h 0664 /sys/devices/system/cpu/cpu2/cpufreq/scaling_governor
 chmod 777 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
 write /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor "barry_allen"
 chmod -h 0664 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
- 
+
 sleep 0.5s
 
 sync
@@ -169,10 +169,7 @@ sync
 	"allow untrusted_app sysfs_display file { open read write getattr add_name setattr remove_name }" \
 	"allow debuggerd app_data_file dir search"
 
-# KNOX Off
-/res/ext/eliminar_knox.sh
-
-/res/ext/killing.sh
+#/res/ext/killing.sh
 
 sleep 0.3s
 
@@ -188,16 +185,16 @@ mount -o remount,ro -t auto /system
 fi
 
 # Iniciar SQlite
-/res/ext/sqlite.sh
+#/res/ext/sqlite.sh
 
 # Iniciar Zipalign
-/res/ext/zipalign.sh
+#/res/ext/zipalign.sh
 
 # Iniciar Wifi Sleeper
-/res/ext/Wifi_sleeper.sh
+#/res/ext/Wifi_sleeper.sh
 
 # Iniciar Kernel Sleepers
-/res/ext/Kernel_sleepers.sh
+#/res/ext/Kernel_sleepers.sh
 
 # Kernel panic setup
 if [ -e /proc/sys/kernel/panic_on_oops ]; then 
@@ -225,65 +222,9 @@ sleep 0.2s
 chmod 0664 /sys/module/lowmemorykiller/parameters/minfree
 chmod 0664 /sys/module/lowmemorykiller/parameters/adj
 
-chmod 0777 /sys/class/misc/rem_sound/rem_sound
-echo "1" > /sys/class/misc/rem_sound/rem_sound
-
-chmod 0666 /sys/class/misc/rem_sound/headphone_volume
-chmod 0666 /sys/class/misc/rem_sound/speaker_volume
-chmod 0666 /sys/class/misc/rem_sound/mic_level_general
-chmod 0666 /sys/class/misc/rem_sound/locked_attribute
-chmod 0666 /sys/class/misc/rem_sound/debug
-chmod 0666 /sys/class/misc/rem_sound/register_dump
-chmod 0666 /sys/class/misc/rem_sound/version
-
 sync
 
 sleep 0.2s
-
-# Tweaks Net
-chmod 0777 /proc/sys/net/*
-sysctl -e -w net.unix.max_dgram_qlen=50
-sysctl -e -w net.ipv4.tcp_moderate_rcvbuf=1
-sysctl -e -w net.ipv4.route.flush=1
-sysctl -e -w net.ipv4.udp_rmem_min=6144
-sysctl -e -w net.ipv4.udp_wmem_min=6144
-sysctl -e -w net.ipv4.tcp_rfc1337=1
-sysctl -e -w net.ipv4.ip_no_pmtu_disc=0
-sysctl -e -w net.ipv4.tcp_ecn=0
-sysctl -e -w net.ipv4.tcp_timestamps=0
-sysctl -e -w net.ipv4.tcp_sack=1
-sysctl -e -w net.ipv4.tcp_dsack=1
-sysctl -e -w net.ipv4.tcp_low_latency=1
-sysctl -e -w net.ipv4.tcp_fack=1
-sysctl -e -w net.ipv4.tcp_window_scaling=1
-sysctl -e -w net.ipv4.tcp_tw_recycle=1
-sysctl -e -w net.ipv4.tcp_tw_reuse=1
-sysctl -e -w net.ipv4.tcp_congestion_control=cubic
-sysctl -e -w net.ipv4.tcp_syncookies=1
-sysctl -e -w net.ipv4.tcp_synack_retries=2
-sysctl -e -w net.ipv4.tcp_syn_retries=2
-sysctl -e -w net.ipv4.tcp_max_syn_backlog=1024
-sysctl -e -w net.ipv4.tcp_max_tw_buckets=16384
-sysctl -e -w net.ipv4.icmp_echo_ignore_all=1
-sysctl -e -w net.ipv4.icmp_echo_ignore_broadcasts=1
-sysctl -e -w net.ipv4.icmp_ignore_bogus_error_responses=1
-sysctl -e -w net.ipv4.tcp_no_metrics_save=1
-sysctl -e -w net.ipv4.tcp_fin_timeout=15
-sysctl -e -w net.ipv4.tcp_keepalive_intvl=30
-sysctl -e -w net.ipv4.tcp_keepalive_probes=5
-sysctl -e -w net.ipv4.tcp_keepalive_time=1800
-sysctl -e -w net.ipv4.ip_forward=0
-sysctl -e -w net.ipv4.conf.all.send_redirects=0
-sysctl -e -w net.ipv4.conf.default.send_redirects=0
-sysctl -e -w net.ipv4.conf.all.rp_filter=1
-sysctl -e -w net.ipv4.conf.default.rp_filter=1
-sysctl -e -w net.ipv4.conf.all.accept_source_route=0
-sysctl -e -w net.ipv4.conf.default.accept_source_route=0 
-sysctl -e -w net.ipv4.conf.all.accept_redirects=0
-sysctl -e -w net.ipv4.conf.default.accept_redirects=0
-sysctl -e -w net.ipv4.conf.all.secure_redirects=0
-sysctl -e -w net.ipv4.conf.default.secure_redirects=0
-chmod 0644 /proc/sys/net/*
 
 echo "50" > /sys/module/zswap/parameters/max_pool_percent
 
@@ -345,34 +286,6 @@ done &
 sleep 0.5s
 
 sync
-
-# Enable Dynamic FSync
-chmod 0777 /sys/kernel/dyn_fsync/Dyn_fsync_active
-echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
-chmod 0664 /sys/kernel/dyn_fsync/Dyn_fsync_active
-
-# Enable KSM and optimice Tweaks
-chmod 0777 /sys/kernel/mm/ksm/*
-echo "1" > /sys/kernel/mm/ksm/run
-echo "512" > /sys/kernel/mm/ksm/pages_to_scan
-echo "1000" > /sys/kernel/mm/ksm/sleep_millisecs
-chmod 0664 /sys/kernel/mm/ksm/*
-
-# Enable Intelli_Plug
-chmod 0777 /sys/module/intelli_plug/parameters/intelli_plug_active
-echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
-chmod 0664 /sys/module/intelli_plug/parameters/intelli_plug_active
-
-# Enable zen_decision.
-chmod 0777 /sys/kernel/zen_decision/enabled
-chmod "1" /sys/kernel/zen_decision/enabled
-echo "500" > /sys/kernel/zen_decision/wake_wait_time
-chmod 0664 /sys/kernel/zen_decision/enabled
-
-# Enable Simple GPU algorithm.
-chmod 0777 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
-echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
-chmod 0664 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
 
 # Debug level
 if [ -e /sys/module/lowmemorykiller/parameters/debug_level ]; then

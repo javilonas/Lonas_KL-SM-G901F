@@ -32,8 +32,6 @@ on early-init
     mount debugfs debugfs /sys/kernel/debug
 
 on init
-    chmod 0701 /mnt/media_rw
-    mkdir /storage 0775 system system
     # See storage config details at http://source.android.com/tech/storage/
     mkdir /mnt/media_rw/extSdCard 0700 media_rw media_rw
     mkdir /mnt/media_rw/UsbDriveA 0700 media_rw media_rw
@@ -47,14 +45,14 @@ on init
     mkdir /persist 0771 system system
     # See storage config details at http://source.android.com/tech/storage/
     mkdir /mnt/shell/emulated 0700 shell shell
-    mkdir /storage/emulated 0770 root root
+    mkdir /storage/emulated 0555 root root
 
     export EXTERNAL_STORAGE /storage/emulated/legacy
     export EMULATED_STORAGE_SOURCE /mnt/shell/emulated
     export EMULATED_STORAGE_TARGET /storage/emulated
 
     export SECONDARY_STORAGE /storage/extSdCard
-    mkdir /storage/extSdCard 0770 root root
+    mkdir /storage/extSdCard 0555 root root
     # Support legacy paths
     symlink /storage/emulated/legacy /sdcard
     symlink /storage/emulated/legacy /mnt/sdcard
@@ -73,13 +71,13 @@ on init
 
     export SECONDARY_STORAGE /storage/extSdCard
 
-    mkdir /storage/extSdCard 0770 root root
-    mkdir /storage/UsbDriveA 0770 root root
-    mkdir /storage/UsbDriveB 0770 root root
-    mkdir /storage/UsbDriveC 0770 root root
-    mkdir /storage/UsbDriveD 0770 root root
-    mkdir /storage/UsbDriveE 0770 root root
-    mkdir /storage/UsbDriveF 0770 root root
+    mkdir /storage/extSdCard 0700 root root
+    mkdir /storage/UsbDriveA 0700 root root
+    mkdir /storage/UsbDriveB 0700 root root
+    mkdir /storage/UsbDriveC 0700 root root
+    mkdir /storage/UsbDriveD 0700 root root
+    mkdir /storage/UsbDriveE 0700 root root
+    mkdir /storage/UsbDriveF 0700 root root
 
 on early-boot
     # set RLIMIT_MEMLOCK to 64MB
@@ -121,12 +119,12 @@ on boot
     # permissions for bluetooth.
     setprop ro.bt.bdaddr_path "/efs/bluetooth/bt_addr"
     chown bluetooth net_bt_stack ro.bt.bdaddr_path
-    chown bluetooth bluetooth /dev/ttyHS0
+    chown bluetooth net_bt_stack /dev/ttyHS0
     chmod 0660 /dev/ttyHS0
     chmod 0660 /sys/class/rfkill/rfkill0/state
-    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
-    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
-    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/device/extldo
+    chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/state
+    chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/type
+    chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/device/extldo
 
     # bluetooth LPM
     chmod 0660 /proc/bluetooth/sleep/lpm
@@ -193,7 +191,7 @@ on boot
     setprop net.tcp.buffersize.umts    4094,87380,110208,4096,16384,110208
     setprop net.tcp.buffersize.hspa    4094,87380,1220608,4096,16384,1220608
     setprop net.tcp.buffersize.hsupa   4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.hsdpa   4094,87380,1220608,4096,16384,1220608
+    setprop net.tcp.buffersize.hsdpa   4094,87380,2441216,4096,16384,2441216
     setprop net.tcp.buffersize.hspap   4094,87380,1220608,4096,16384,1220608
     setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
     setprop net.tcp.buffersize.gprs    4092,8760,11680,4096,8760,11680
@@ -270,7 +268,7 @@ on post-fs-data
     # we will remap this as /mnt/sdcard with the sdcard fuse tool
     mkdir /data/misc/camera 0770 camera camera
 
-    mkdir /data/media 0775 media_rw media_rw
+    mkdir /data/media 0770 media_rw media_rw
     chown media_rw media_rw /data/media
 
     mkdir /data/misc/bluetooth 0770 bluetooth bluetooth
@@ -316,6 +314,9 @@ on post-fs-data
 
     # Create directory used by the DASH client
     mkdir /data/misc/dash 0770 media audio
+
+    # Create directory used by display clients
+    mkdir /data/misc/display 0770 system graphics
 
     # Mounting of persist is moved to 'on emmc-fs' and 'on fs' sections
     # We chown/chmod /persist again so because mount is run as root + defaults
@@ -379,6 +380,9 @@ on property:sys.boot_completed=1
     write /dev/kmsg "Boot completed "
 
 on property:persist.radio.atfwd.start=false
+    stop atfwd
+
+on property:radio.atfwd.start=false
     stop atfwd
 
 # corefile limit and ETB enabling
@@ -458,7 +462,7 @@ service dpmd /system/bin/dpmd
     class late_start
     socket dpmd stream 660 root system
 
-service irsc_util /system/bin/logwrapper /system/bin/irsc_util "/etc/sec_config"
+service irsc_util /system/bin/irsc_util "/etc/sec_config"
     class main
     user root
     oneshot
@@ -532,7 +536,7 @@ service bt-sap /system/bin/sapd 15
 
 service btsnoop /system/bin/btsnoop
    user bluetooth
-   group bluetooth net_bt_admin sdcard_rw sdcard_r
+   group bluetooth net_bt_admin sdcard_rw sdcard_r media_rw
    class late_start
    disabled
    oneshot

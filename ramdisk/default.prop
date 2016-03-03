@@ -1,8 +1,7 @@
 #
 # ADDITIONAL_DEFAULT_PROPERTIES
 #
-persist.cne.feature=0
-persist.security.ams.enforcing=0
+persist.security.ams.enforcing=1
 ro.secure=0
 ro.allow.mock.location=0
 ro.debuggable=1
@@ -10,15 +9,12 @@ ro.adb.secure=0
 ro.zygote=zygote32
 persist.sys.usb.config=mtp,adb
 ro.qualcomm.perf.cores_online=2
-ro.securestorage.support=false
-androidboot.selinux=0
+persist.radio.tdscdma_present=1
+persist.radio.add_power_save=1
+persist.radio.lte_vrte_ltd=1
 dalvik.vm.dex2oat-Xms=64m
 dalvik.vm.dex2oat-Xmx=512m
 dalvik.vm.image-dex2oat-Xms=64m
 dalvik.vm.image-dex2oat-Xmx=64m
-dalvik.vm.image-dex2oat-filter=everything
-dalvik.vm.dex2oat-filter=everything
 ro.dalvik.vm.native.bridge=0
 wlan.wfd.hdcp=disable
-ro.config.knox=0
-ro.config.tima=0

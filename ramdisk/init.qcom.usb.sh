@@ -166,7 +166,7 @@ case "$target" in
         echo ssusb > /sys/bus/platform/devices/usb_bam/enable
     ;;
     "apq8084")
-	if [ "$baseband" == "apq" ]; then
+	if [ "$baseband" == "apq" ] || [ "$esoc_link" == "PCIe" ]; then
 		echo "msm_hsic_host" > /sys/bus/platform/drivers/xhci_msm_hsic/unbind
 	fi
 
