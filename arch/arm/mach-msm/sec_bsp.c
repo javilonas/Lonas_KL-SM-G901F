@@ -174,10 +174,10 @@ int request_bimc_clk(unsigned long request_clk)
 
 	ret = atomic_read(&bimc_lock_count);
 	if (request_clk && ret) {
-		pr_err("%s: error bimc_lock_count locked\n",__func__);
+		pr_debug("%s: error bimc_lock_count locked\n",__func__);
 		return -EINVAL;
 	} else if (!request_clk && !ret) {
-		pr_err("%s: error bimc_lock_count unlocked\n",__func__);
+		pr_debug("%s: error bimc_lock_count unlocked\n",__func__);
 		return -EINVAL;
 	}
 
