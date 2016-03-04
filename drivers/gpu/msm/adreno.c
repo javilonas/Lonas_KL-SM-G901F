@@ -178,11 +178,11 @@ static void adreno_input_event(struct input_handle *handle, unsigned int type,
 	 * already in slumber schedule the wake.
 	 */
 
-	 if (device->state == KGSL_STATE_NAP) {
-	 	/*
-	 	 * Set the wake on touch bit to keep from coming back here and
-	 	 * keeping the device in nap without rendering
-	 	 */
+	if (device->state == KGSL_STATE_NAP) {
+		/*
+		 * Set the wake on touch bit to keep from coming back here and
+		 * keeping the device in nap without rendering
+		 */
 
 		device->flags |= KGSL_FLAG_WAKE_ON_TOUCH;
 
