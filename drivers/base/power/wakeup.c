@@ -23,6 +23,12 @@ static bool enable_si_ws = false;
 module_param(enable_si_ws, bool, 0644);
 static bool enable_msm_hsic_ws = true;
 module_param(enable_msm_hsic_ws, bool, 0644);
+static bool enable_wlan_rx_wake_ws = true;
+module_param(enable_wlan_rx_wake_ws, bool, 0644);
+static bool enable_wlan_ctrl_wake_ws = true;
+module_param(enable_wlan_ctrl_wake_ws, bool, 0644);
+static bool enable_wlan_wake_ws = true;
+module_param(enable_wlan_wake_ws, bool, 0644);
 
 /*
  * If set, the suspend/hibernate code will abort transitions to a sleep state
@@ -388,6 +394,21 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
 
+	if (!enable_si_ws && !strcmp(ws->name, "sensor_ind"))
+		return;
+
+	if (!enable_msm_hsic_ws && !strcmp(ws->name, "msm_hsic_host"))
+		return;
+
+	if (!enable_wlan_rx_wake_ws && !strcmp(ws->name, "wlan_rx_wake"))
+		return;
+
+	if (!enable_wlan_ctrl_wake_ws && !strcmp(ws->name, "wlan_ctrl_wake"))
+		return;
+
+	if (!enable_wlan_wake_ws && !strcmp(ws->name, "wlan_wake"))
+		return;
+
 	/*
 	 * active wakeup source should bring the system
 	 * out of PM_SUSPEND_FREEZE state
@@ -400,9 +421,9 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 	}
 
 	if (!enable_msm_hsic_ws && !strcmp(ws->name, "msm_hsic_host")) {
-                pr_info("wakeup source msm_hsic_host activate skipped\n");
-                return;
-        }
+		pr_info("wakeup source msm_hsic_host activate skipped\n");
+		return;
+	}
 
 	ws->active = true;
 	ws->active_count++;
@@ -486,7 +507,7 @@ static void update_prevent_sleep_time(struct wakeup_source *ws, ktime_t now)
 }
 #else
 static inline void update_prevent_sleep_time(struct wakeup_source *ws,
-					     ktime_t now) {}
+					ktime_t now) {}
 #endif
 
 /**
@@ -603,7 +624,7 @@ static void pm_wakeup_timer_fn(unsigned long data)
 	spin_lock_irqsave(&ws->lock, flags);
 
 	if (ws->active && ws->timer_expires
-	    && time_after_eq(jiffies, ws->timer_expires)) {
+		&& time_after_eq(jiffies, ws->timer_expires)) {
 		wakeup_source_deactivate(ws);
 		ws->expire_count++;
 	}
@@ -649,7 +670,7 @@ void __pm_wakeup_event(struct wakeup_source *ws, unsigned int msec)
 		ws->timer_expires = expires;
 	}
 
- unlock:
+unlock:
 	spin_unlock_irqrestore(&ws->lock, flags);
 }
 EXPORT_SYMBOL_GPL(__pm_wakeup_event);
@@ -703,9 +724,9 @@ static void print_active_wakeup_sources(void)
 			pr_info("active wakeup source: %s\n", ws->name);
 			active = 1;
 		} else if (!active &&
-			   (!last_activity_ws ||
-			    ktime_to_ns(ws->last_time) >
-			    ktime_to_ns(last_activity_ws->last_time))) {
+				(!last_activity_ws ||
+				ktime_to_ns(ws->last_time) >
+				ktime_to_ns(last_activity_ws->last_time))) {
 			last_activity_ws = ws;
 		}
 	}
@@ -843,7 +864,7 @@ static struct dentry *wakeup_sources_stats_dentry;
  * @ws: Wakeup source object to print the statistics for.
  */
 static int print_wakeup_source_stats(struct seq_file *m,
-				     struct wakeup_source *ws)
+				struct wakeup_source *ws)
 {
 	unsigned long flags;
 	ktime_t total_time;
@@ -909,7 +930,7 @@ static int wakeup_sources_stats_show(struct seq_file *m, void *unused)
 
 #ifdef CONFIG_SEC_PM_DEBUG
 static int print_wakeup_source_active(
-				     struct wakeup_source *ws)
+				struct wakeup_source *ws)
 {
 	unsigned long flags;
 	ktime_t total_time;
@@ -995,7 +1016,7 @@ int active_wakelock_stats_show(struct seq_file *m, void *unused)
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		spin_lock_irqsave(&ws->lock, flags);
 		if (ws->active)
-		     seq_printf(m, "~~%s", ws->name);
+			seq_printf(m, "~~%s", ws->name);
 		spin_unlock_irqrestore(&ws->lock, flags);
 	}
 	rcu_read_unlock();
