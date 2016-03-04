@@ -19,7 +19,7 @@
 
 #include "power.h"
 
-static bool enable_si_ws = false;
+static bool enable_si_ws = true;
 module_param(enable_si_ws, bool, 0644);
 static bool enable_msm_hsic_ws = true;
 module_param(enable_msm_hsic_ws, bool, 0644);
