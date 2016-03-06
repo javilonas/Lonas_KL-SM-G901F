@@ -104,9 +104,9 @@ void unregister_cpu(struct cpu *cpu)
 
 #ifdef CONFIG_ARCH_CPU_PROBE_RELEASE
 static ssize_t cpu_probe_store(struct device *dev,
-			       struct device_attribute *attr,
-			       const char *buf,
-			       size_t count)
+				 struct device_attribute *attr,
+				 const char *buf,
+				 size_t count)
 {
 	return arch_cpu_probe(buf, count);
 }
@@ -155,8 +155,8 @@ static ssize_t show_crash_notes(struct device *dev, struct device_attribute *att
 static DEVICE_ATTR(crash_notes, 0400, show_crash_notes, NULL);
 
 static ssize_t show_crash_notes_size(struct device *dev,
-				     struct device_attribute *attr,
-				     char *buf)
+				 struct device_attribute *attr,
+				 char *buf)
 {
 	ssize_t rc;
 
@@ -176,8 +176,8 @@ struct cpu_attr {
 };
 
 static ssize_t show_cpus_attr(struct device *dev,
-			      struct device_attribute *attr,
-			      char *buf)
+				 struct device_attribute *attr,
+				 char *buf)
 {
 	struct cpu_attr *ca = container_of(attr, struct cpu_attr, attr);
 	int n = cpulist_scnprintf(buf, PAGE_SIZE-2, *(ca->map));
@@ -201,7 +201,7 @@ static struct cpu_attr cpu_attrs[] = {
  * Print values for NR_CPUS and offlined cpus
  */
 static ssize_t print_cpus_kernel_max(struct device *dev,
-				     struct device_attribute *attr, char *buf)
+				 struct device_attribute *attr, char *buf)
 {
 	int n = snprintf(buf, PAGE_SIZE-2, "%d\n", NR_CPUS - 1);
 	return n;
@@ -212,7 +212,7 @@ static DEVICE_ATTR(kernel_max, 0444, print_cpus_kernel_max, NULL);
 unsigned int total_cpus;
 
 static ssize_t print_cpus_offline(struct device *dev,
-				  struct device_attribute *attr, char *buf)
+				 struct device_attribute *attr, char *buf)
 {
 	int n = 0, len = PAGE_SIZE-2;
 	cpumask_var_t offline;
@@ -233,7 +233,7 @@ static ssize_t print_cpus_offline(struct device *dev,
 			n += snprintf(&buf[n], len - n, "%d", nr_cpu_ids);
 		else
 			n += snprintf(&buf[n], len - n, "%d-%d",
-						      nr_cpu_ids, total_cpus-1);
+							 nr_cpu_ids, total_cpus-1);
 	}
 
 	n += snprintf(&buf[n], len - n, "\n");
@@ -293,7 +293,7 @@ int __cpuinit register_cpu(struct cpu *cpu, int num)
 		error = device_create_file(&cpu->dev, &dev_attr_crash_notes);
 	if (!error)
 		error = device_create_file(&cpu->dev,
-					   &dev_attr_crash_notes_size);
+					 &dev_attr_crash_notes_size);
 #endif
 	return error;
 }
