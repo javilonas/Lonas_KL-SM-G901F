@@ -893,13 +893,13 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DWLAN_FEATURE_ROAM_SCAN_OFFLOAD \
 		-DWLAN_FEATURE_GTK_OFFLOAD \
 		-DWLAN_WAKEUP_EVENTS \
-	        -DWLAN_KD_READY_NOTIFIER \
+		-DWLAN_KD_READY_NOTIFIER \
 		-DWLAN_NL80211_TESTMODE \
 		-DFEATURE_WLAN_BATCH_SCAN \
 		-DFEATURE_WLAN_LPHB \
 		-DFEATURE_WLAN_PAL_TIMER_DISABLE \
 		-DFEATURE_WLAN_PAL_MEM_DISABLE \
-                -DQCA_SUPPORT_TXRX_VDEV_PAUSE_LL \
+		-DQCA_SUPPORT_TXRX_VDEV_PAUSE_LL \
 		-DQCA_SUPPORT_TX_THROTTLE_LL \
 		-DWMI_INTERFACE_EVENT_LOGGING\
 		-DATH_SUPPORT_WAPI\
@@ -919,7 +919,7 @@ endif
 
 ifeq ($(CONFIG_QCA_WIFI_2_0), 1)
 ifeq ($(CONFIG_DEBUG_LL),y)
-CDEFINES +=    	-DQCA_PKT_PROTO_TRACE
+CDEFINES +=	-DQCA_PKT_PROTO_TRACE
 endif
 endif
 
@@ -1190,6 +1190,15 @@ endif
 EXTRA_CFLAGS += -Wno-maybe-uninitialized -Wno-unused-function
 
 KBUILD_CPPFLAGS += $(CDEFINES)
+
+# Currently, for versions of gcc which support it, the kernel Makefile
+# is disabling the maybe-uninitialized warning.  Re-enable it for the
+# WLAN driver.  Note that we must use EXTRA_CFLAGS here so that it
+# will override the kernel settings.
+ifeq ($(call cc-option-yn, -Wmaybe-uninitialized),y)
+EXTRA_CFLAGS += -Wmaybe-uninitialized
+EXTRA_CFLAGS += -fno-pic
+endif
 
 # Module information used by KBuild framework
 obj-$(CONFIG_QCA_CLD_WLAN) += $(MODNAME).o
