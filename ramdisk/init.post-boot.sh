@@ -77,6 +77,15 @@ chmod -h 0777 /sys/module/intelli_thermal/parameters/intelli_enabled
 echo "1" > /sys/module/intelli_thermal/parameters/intelli_enabled
 chmod -h 0666 /sys/module/intelli_thermal/parameters/intelli_enabled
 
+# Tweaks for batery (intelli thermal)
+chmod -h 0777 /sys/module/intelli_thermal/parameters/limit_temp_degC
+echo "63" > /sys/module/intelli_thermal/parameters/limit_temp_degC
+chmod -h 0666 /sys/module/intelli_thermal/parameters/limit_temp_degC
+
+chmod -h 0777 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
+echo "77" > /sys/module/intelli_thermal/parameters/core_limit_temp_degC
+chmod -h 0666 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
+
 # Enable Simple GPU algorithm.
 chmod -h 0777 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
 echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
@@ -337,43 +346,9 @@ chmod -h 0777 /sys/kernel/fast_charge/force_fast_charge
 echo "1" > /sys/kernel/fast_charge/force_fast_charge
 chmod -h 0666 /sys/kernel/fast_charge/force_fast_charge
 
-sync
-
-sleep 0.2s
-
 # Fix permisos
 chmod 0666 /sys/module/lowmemorykiller/parameters/minfree
 chmod 0666 /sys/module/lowmemorykiller/parameters/adj
-
-# RemSound
-chown system.system /sys/class/misc/rem_sound/rem_sound
-chmod -h 0666 /sys/class/misc/rem_sound/rem_sound
-echo "1" > /sys/class/misc/rem_sound/rem_sound
-
-chown system.system /sys/class/misc/rem_sound/headphone_volume
-chmod -h 0666 /sys/class/misc/rem_sound/headphone_volume
-
-chown system.system /sys/class/misc/rem_sound/speaker_volume
-chmod -h 0666 /sys/class/misc/rem_sound/speaker_volume
-
-chown system.system /sys/class/misc/rem_sound/mic_level_general
-chmod -h 0666 /sys/class/misc/rem_sound/mic_level_general
-
-chown system.system /sys/class/misc/rem_sound/locked_attribute
-chmod -h 0666 /sys/class/misc/rem_sound/locked_attribute
-
-chown system.system /sys/class/misc/rem_sound/debug
-chmod -h 0666 /sys/class/misc/rem_sound/debug
-
-chown system.system /sys/class/misc/rem_sound/register_dump
-chmod -h 0666 /sys/class/misc/rem_sound/register_dump
-
-chown system.system /sys/class/misc/rem_sound/version
-chmod -h 0666 /sys/class/misc/rem_sound/version
-
-sync
-
-sleep 0.2s
 
 echo "50" > /sys/module/zswap/parameters/max_pool_percent
 
@@ -424,7 +399,7 @@ while sleep 1; do
 	fi;
 done &
 
-sleep 0.5s
+sleep 0.7s
 
 sync
 
@@ -439,7 +414,7 @@ chmod -h 0777 /sys/kernel/mm/ksm/*
 chown system.system /sys/kernel/mm/ksm/run
 echo "1" > /sys/kernel/mm/ksm/run
 chown system.system /sys/kernel/mm/ksm/pages_to_scan
-echo "512" > /sys/kernel/mm/ksm/pages_to_scan
+echo "300" > /sys/kernel/mm/ksm/pages_to_scan
 chown system.system /sys/kernel/mm/ksm/sleep_millisecs
 echo "1000" > /sys/kernel/mm/ksm/sleep_millisecs
 chmod -h 0666 /sys/kernel/mm/ksm/*
@@ -455,27 +430,6 @@ fi
 chmod -h 0777 /proc/sys/kernel/random/read_wakeup_threshold
 echo "256" > /proc/sys/kernel/random/read_wakeup_threshold
 chmod -h 0666 /proc/sys/kernel/random/read_wakeup_threshold
-
-# Tweaks Memory
-chmod -h 0777 /proc/sys/kernel/random/write_wakeup_threshold
-echo "1376" > /proc/sys/kernel/random/write_wakeup_threshold
-chmod -h 0666 /proc/sys/kernel/random/write_wakeup_threshold
-
-chmod -h 0777 /proc/sys/vm/vfs_cache_pressure
-echo "200" /proc/sys/vm/vfs_cache_pressure
-chmod -h 0666 /proc/sys/vm/vfs_cache_pressure
-
-chmod -h 0777 /proc/sys/vm/min_free_kbyte
-echo "8192" /proc/sys/vm/min_free_kbytes
-chmod -h 0666 /proc/sys/vm/min_free_kbyte
-
-chmod -h 0777 /proc/sys/vm/dirty_expire_centisecs
-echo "300" /proc/sys/vm/dirty_expire_centisecs
-chmod -h 0666 /proc/sys/vm/dirty_expire_centisecs
-
-chmod -h 0777 /proc/sys/vm/dirty_writeback_centisecs
-echo "1500" /proc/sys/vm/dirty_writeback_centisecs
-chmod -h 0666 /proc/sys/vm/dirty_writeback_centisecs
 
 sleep 0.5s
 
