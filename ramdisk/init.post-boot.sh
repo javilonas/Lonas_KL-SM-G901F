@@ -72,6 +72,11 @@ chmod -h 0777 /sys/module/intelli_plug/parameters/intelli_plug_active
 echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
 chmod -h 0666 /sys/module/intelli_plug/parameters/intelli_plug_active
 
+# Enable Intelli_thermal
+chmod -h 0777 /sys/module/intelli_thermal/parameters/intelli_enabled
+echo "1" > /sys/module/intelli_thermal/parameters/intelli_enabled
+chmod -h 0666 /sys/module/intelli_thermal/parameters/intelli_enabled
+
 # Enable Simple GPU algorithm.
 chmod -h 0777 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
 echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
