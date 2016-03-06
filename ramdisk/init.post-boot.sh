@@ -129,6 +129,12 @@ chmod 777 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
 write /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor "barry_allen"
 chmod -h 0664 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
 
+echo 20 > /sys/module/cpu_boost/parameters/boost_ms
+echo 1497600 > /sys/module/cpu_boost/parameters/sync_threshold
+echo 0 > /sys/devices/system/cpu/cpufreq/barry_allen/sampling_down_factor
+echo 0 > /sys/module/cpu_boost/parameters/input_boost_freq
+echo 40 > /sys/module/cpu_boost/parameters/input_boost_ms
+
 chmod 777 /dev/cpuctl/apps/cpu.notify_on_migrate
 echo 0 > /dev/cpuctl/apps/cpu.notify_on_migrate
 chmod -h 0644 /dev/cpuctl/apps/cpu.notify_on_migrate
@@ -180,6 +186,86 @@ chown system.system /sys/devices/fe1af000.slim/es705-codec-gen0/keyword_net_path
 chown system.system /sys/devices/fe1af000.slim/es704-codec-gen0/keyword_grammar_path
 chown system.system /sys/devices/fe1af000.slim/es704-codec-gen0/keyword_net_path
 
+# Change cpu-boost sysfs permission
+chown -h system.system /sys/module/cpu_boost/parameters/sync_threshold
+chown -h system.system /sys/module/cpu_boost/parameters/boost_ms
+chmod -h 0644 /sys/module/cpu_boost/parameters/sync_threshold
+chmod -h 0644 /sys/module/cpu_boost/parameters/boost_ms
+
+# Change bimc-boost sysfs permission
+chown -h system.system /sys/module/qcom_cpufreq/parameters/boost_ms
+chmod -h 0644 /sys/module/qcom_cpufreq/parameters/boost_ms
+
+# Change PM debug parameters permission
+chown -h radio.system /sys/module/qpnp_power_on/parameters/wake_enabled
+chown -h radio.system /sys/module/qpnp_power_on/parameters/reset_enabled
+chown -h radio.system /sys/module/qpnp_int/parameters/debug_mask
+chown -h radio.system /sys/module/lpm_levels/parameters/secdebug
+chmod -h 664 /sys/module/qpnp_power_on/parameters/wake_enabled
+chmod -h 664 /sys/module/qpnp_power_on/parameters/reset_enabled
+chmod -h 664 /sys/module/qpnp_int/parameters/debug_mask
+chmod -h 664 /sys/module/lpm_levels/parameters/secdebug
+
+# mdss schedule info debugging
+echo 1 > /d/tracing/events/irq/mdss_dsi_cmd_mdp_busy_start/enable
+echo 1 > /d/tracing/events/irq/mdss_dsi_cmd_mdp_busy_end/enable
+echo 1 > /d/tracing/events/irq/mdss_dsi_isr_start/enable
+echo 1 > /d/tracing/events/irq/mdss_dsi_isr_end/enable
+echo 1 > /d/tracing/events/irq/mdss_mdp_isr_start/enable
+echo 1 > /d/tracing/events/irq/mdss_mdp_isr_end/enable
+
+# Volume down key(connect to PMIC RESIN) wakeup enable/disable
+chown -h radio.system /sys/power/volkey_wakeup
+chmod -h 664 /sys/power/volkey_wakeup
+echo 0 > /sys/power/volkey_wakeup
+
+echo 4 > /sys/module/lpm_levels/enable_low_power/l2
+echo 1 > /sys/module/msm_pm/modes/cpu0/power_collapse/suspend_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu1/power_collapse/suspend_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu2/power_collapse/suspend_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu3/power_collapse/suspend_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu0/power_collapse/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu1/power_collapse/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu2/power_collapse/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu3/power_collapse/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu0/standalone_power_collapse/suspend_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu1/standalone_power_collapse/suspend_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu2/standalone_power_collapse/suspend_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu3/standalone_power_collapse/suspend_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu0/standalone_power_collapse/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu1/standalone_power_collapse/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu2/standalone_power_collapse/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu3/standalone_power_collapse/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu0/retention/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu1/retention/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu2/retention/idle_enabled
+echo 1 > /sys/module/msm_pm/modes/cpu3/retention/idle_enabled
+echo 1 > /sys/devices/system/cpu/cpu1/online
+echo 1 > /sys/devices/system/cpu/cpu2/online
+echo 1 > /sys/devices/system/cpu/cpu3/online
+
+# GPU permission
+chown -h radio.system /sys/class/kgsl/kgsl-3d0/default_pwrlevel
+chown -h radio.system /sys/class/kgsl/kgsl-3d0/idle_timer
+chmod -h 0664 /sys/class/kgsl/kgsl-3d0/default_pwrlevel
+chmod -h 0664 /sys/class/kgsl/kgsl-3d0/idle_timer
+
+# Change cpubw sysfs permission and setting
+chown -h radio.system /sys/class/devfreq/0.qcom,cpubw/available_frequencies
+chown -h radio.system /sys/class/devfreq/0.qcom,cpubw/available_governors
+chown -h radio.system /sys/class/devfreq/0.qcom,cpubw/governor
+chown -h radio.system /sys/class/devfreq/0.qcom,cpubw/max_freq
+chown -h radio.system /sys/class/devfreq/0.qcom,cpubw/min_freq
+chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/available_frequencies
+chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/available_governors
+chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/governor
+chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/max_freq
+chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/min_freq
+
+#Set default values on boot
+echo "200000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
+echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
+
 sleep 0.5s
 
 sync
@@ -210,12 +296,6 @@ sync
 	"allow debuggerd app_data_file dir search"
 
 sleep 0.3s
-
-sync
-
-#Set default values on boot
-echo "200000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
-echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
 
 sync
 
@@ -443,6 +523,9 @@ fi;
 start thermal-engine
 
 sync
+
+# RE-Disable Mpdecision
+stop mpdecision
 
 mount -o remount,ro -t auto /
 mount -t rootfs -o remount,ro rootfs
