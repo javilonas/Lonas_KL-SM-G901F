@@ -118,6 +118,8 @@
 
 #define	MAX_NUM_LEDS	3
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 u8 LED_DYNAMIC_CURRENT = 0x28;
 u8 LED_LOWPOWER_MODE = 0x0;
 
@@ -127,6 +129,8 @@ u32 LED_B_CURRENT = 0x28;
 
 u32 led_default_cur = 0x28;
 u32 led_lowpower_cur = 0x05;
+
+unsigned long disabled_samsung_pattern = 0;
 
 static struct an30259_led_conf led_conf[] = {
 	{
@@ -199,6 +203,7 @@ int led_slope_down_2;
 /*path : /sys/class/sec/led/led_intensity*/
 /*path : /sys/class/sec/led/led_speed*/
 /*path : /sys/class/sec/led/led_slope*/
+/*path : /sys/class/sec/led/disable_samsung_pattern*/
 /*path : /sys/class/leds/led_r/brightness*/
 /*path : /sys/class/leds/led_g/brightness*/
 /*path : /sys/class/leds/led_b/brightness*/
@@ -381,6 +386,11 @@ static void an30259a_start_led_pattern(int mode)
 
 	if (mode > POWERING)
 		return;
+
+	if(disabled_samsung_pattern) {
+		return;
+	}
+
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
 	if (mode == LED_OFF)
@@ -398,9 +408,9 @@ static void an30259a_start_led_pattern(int mode)
 		g_brightness = LED_G_CURRENT;
 		b_brightness = LED_B_CURRENT;
 	} else {
-		r_brightness = led_intensity / LED_DYNAMIC_CURRENT;
-		g_brightness = led_intensity / LED_DYNAMIC_CURRENT;
-		b_brightness = led_intensity / LED_DYNAMIC_CURRENT;
+		r_brightness = MIN(led_intensity, LED_MAX_CURRENT);
+		g_brightness = MIN(led_intensity, LED_MAX_CURRENT);
+		b_brightness = MIN(led_intensity, LED_MAX_CURRENT);
 	}
 
 	switch (mode) {
@@ -436,7 +446,6 @@ static void an30259a_start_led_pattern(int mode)
 						10, (15 / led_speed), (15 / led_speed), 0, 1, (10 / led_speed), 0, 0, 0, 0);
 		}
 		break;
-
 	case LOW_BATTERY:
 		pr_info("LED Low Battery Pattern on\n");
 		leds_on(LED_R, true, true, r_brightness);
@@ -608,6 +617,7 @@ static ssize_t store_an30259a_led_blink(struct device *dev,
 	u8 led_r_brightness = 0;
 	u8 led_g_brightness = 0;
 	u8 led_b_brightness = 0;
+	struct work_struct *reset = 0;
 
 	retval = sscanf(buf, "0x%x %d %d", &led_brightness,
 				&delay_on_time, &delay_off_time);
@@ -617,7 +627,7 @@ static ssize_t store_an30259a_led_blink(struct device *dev,
 		return count;
 	}
 	/*Reset an30259a*/
-	an30259a_start_led_pattern(LED_OFF);
+	an30259a_reset_register_work(reset);
 
 	/*Set LED blink mode*/
 	led_r_brightness = ((u32)led_brightness & LED_R_MASK)
@@ -910,10 +920,28 @@ static ssize_t led_blink_store(struct device *dev,
 	return len;
 }
 
+static ssize_t disable_samsung_pattern_on_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, 10, "%lu\n", disabled_samsung_pattern);
+}
+
+static ssize_t disable_samsung_pattern_on_store(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t len)
+{
+
+	if (kstrtoul(buf, 0, &disabled_samsung_pattern))
+		return -EINVAL;
+
+	return 1;
+}
+
 /* permission for sysfs node */
 static DEVICE_ATTR(delay_on, 0644, led_delay_on_show, led_delay_on_store);
 static DEVICE_ATTR(delay_off, 0644, led_delay_off_show, led_delay_off_store);
 static DEVICE_ATTR(blink, 0644, NULL, led_blink_store);
+static DEVICE_ATTR(disable_samsung_pattern, 0644, disable_samsung_pattern_on_show, disable_samsung_pattern_on_store);
 
 #ifdef SEC_LED_SPECIFIC
 /* below nodes is SAMSUNG specific nodes */
@@ -965,6 +993,7 @@ static struct attribute *sec_led_attributes[] = {
 	&dev_attr_led_slope.attr,
 	&dev_attr_led_br_lev.attr,
 	&dev_attr_led_lowpower.attr,
+	&dev_attr_disable_samsung_pattern.attr,
 	NULL,
 };
 
