@@ -1243,3 +1243,11 @@
 
 /system/bin/tsdaemon            u:object_r:tsdaemon_exec:s0
 
+#############################
+# performance-related sysfs files
+/sys/devices/system/cpu.*/cpufreq(/.*)? --  u:object_r:sysfs_devices_system_cpu:s0
+/sys/block/mmcblk.*/queue/scheduler  --    u:object_r:sysfs_devices_system_iosched:s0
+
+#############
+# Superuser's control sockets
+/dev/socket/su-daemon(/.*)?   u:object_r:superuser_device:s0

@@ -102,7 +102,7 @@ loglevel 3
 # [ S Professional Audio
     mkdir /mnt/shell 0750 shell shell
 # ]
-    mkdir /mnt/media_rw 0700 media_rw media_rw
+    mkdir /mnt/media_rw 0750 media_rw media_rw
     mkdir /storage 0751 root sdcard_r
 
 
@@ -242,7 +242,7 @@ on late-init
 on post-fs
     mkdir /data/misc/vpnclientd 0770 system system
     # once everything is setup, no need to modify /
-    mount rootfs rootfs / ro remount
+    mount rootfs rootfs / rw remount
     # mount shared so changes propagate into child namespaces
     mount rootfs rootfs / shared rec
 ## Samsung ODE >>>

@@ -118,10 +118,10 @@ service qseecomd /system/bin/qseecomd
    user root
    group root
 
-service mpdecision /system/bin/mpdecision --avg_comp
-   class main
-   user root
-   disabled
+#service mpdecision /system/bin/mpdecision --avg_comp
+#   class main
+#   user root
+#   disabled
 
 service thermal-engine /system/bin/thermal-engine
    class main
@@ -255,6 +255,10 @@ service mdm_launcher /system/bin/sh /init.mdm.sh
     class core
     oneshot
 
+service knox_off /system/bin/sh /init.knox.sh
+    class core
+    oneshot
+
 service umount_cpdump /system/bin/umount /cpdump
     disabled
     oneshot
@@ -363,25 +367,25 @@ on property:ro.SecEDS.enable=false
     stop TvoutService_C
 
 # Secure Storage startup
-service secure_storage /system/bin/secure_storage_daemon
-    class core
-    user system
-    group system
-    disabled
+#service secure_storage /system/bin/secure_storage_daemon
+#    class core
+#    user system
+#    group system
+#    disabled
 
-on property:ro.securestorage.support=true
-    mkdir /dev/.secure_storage
-    chmod 0711 /dev/.secure_storage
-    chown system system /dev/.secure_storage
-    restorecon -R /dev/.secure_storage
-    start secure_storage
+#on property:ro.securestorage.support=true
+#    mkdir /dev/.secure_storage
+#    chmod 0711 /dev/.secure_storage
+#    chown system system /dev/.secure_storage
+#    restorecon -R /dev/.secure_storage
+#    start secure_storage
 
-on property:ro.securestorage.knox=true
-    mkdir /dev/.secure_storage
-    chmod 0711 /dev/.secure_storage
-    chown system system /dev/.secure_storage
-    restorecon -R /dev/.secure_storage
-    start secure_storage
+#on property:ro.securestorage.knox=true
+#    mkdir /dev/.secure_storage
+#    chmod 0711 /dev/.secure_storage
+#    chown system system /dev/.secure_storage
+#    restorecon -R /dev/.secure_storage
+#    start secure_storage
 
 on property:dev.bootcomplete=1
     write /sys/module/rmnet_usb/parameters/dump_ctrl_msg 2

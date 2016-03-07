@@ -32,6 +32,8 @@ on early-init
     mount debugfs debugfs /sys/kernel/debug
 
 on init
+    chmod 0701 /mnt/media_rw
+    mkdir /storage 0775 system system
     # See storage config details at http://source.android.com/tech/storage/
     mkdir /mnt/media_rw/extSdCard 0700 media_rw media_rw
     mkdir /mnt/media_rw/UsbDriveA 0700 media_rw media_rw
@@ -45,14 +47,14 @@ on init
     mkdir /persist 0771 system system
     # See storage config details at http://source.android.com/tech/storage/
     mkdir /mnt/shell/emulated 0700 shell shell
-    mkdir /storage/emulated 0555 root root
+    mkdir /storage/emulated 0770 root root
 
     export EXTERNAL_STORAGE /storage/emulated/legacy
     export EMULATED_STORAGE_SOURCE /mnt/shell/emulated
     export EMULATED_STORAGE_TARGET /storage/emulated
 
     export SECONDARY_STORAGE /storage/extSdCard
-    mkdir /storage/extSdCard 0555 root root
+    mkdir /storage/extSdCard 0770 root root
     # Support legacy paths
     symlink /storage/emulated/legacy /sdcard
     symlink /storage/emulated/legacy /mnt/sdcard
@@ -71,13 +73,13 @@ on init
 
     export SECONDARY_STORAGE /storage/extSdCard
 
-    mkdir /storage/extSdCard 0700 root root
-    mkdir /storage/UsbDriveA 0700 root root
-    mkdir /storage/UsbDriveB 0700 root root
-    mkdir /storage/UsbDriveC 0700 root root
-    mkdir /storage/UsbDriveD 0700 root root
-    mkdir /storage/UsbDriveE 0700 root root
-    mkdir /storage/UsbDriveF 0700 root root
+    mkdir /storage/extSdCard 0770 root root
+    mkdir /storage/UsbDriveA 0770 root root
+    mkdir /storage/UsbDriveB 0770 root root
+    mkdir /storage/UsbDriveC 0770 root root
+    mkdir /storage/UsbDriveD 0770 root root
+    mkdir /storage/UsbDriveE 0770 root root
+    mkdir /storage/UsbDriveF 0770 root root
 
 on early-boot
     # set RLIMIT_MEMLOCK to 64MB
@@ -268,7 +270,7 @@ on post-fs-data
     # we will remap this as /mnt/sdcard with the sdcard fuse tool
     mkdir /data/misc/camera 0770 camera camera
 
-    mkdir /data/media 0770 media_rw media_rw
+    mkdir /data/media 0775 media_rw media_rw
     chown media_rw media_rw /data/media
 
     mkdir /data/misc/bluetooth 0770 bluetooth bluetooth
