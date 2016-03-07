@@ -63,33 +63,22 @@ if [ -x /system/xbin/busybox ]; then
 	set_environment
 fi
 
-
-# Disable Mpdecision
-stop mpdecision
+# Enable Intelli_thermal
+chmod -h 0777 /sys/module/intelli_thermal/parameters/enabled
+echo "Y" > /sys/module/intelli_thermal/parameters/enabled
+chmod -h 0666 /sys/module/intelli_thermal/parameters/enabled
 
 # Enable Intelli_Plug
 chmod -h 0777 /sys/module/intelli_plug/parameters/intelli_plug_active
 echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
 chmod -h 0666 /sys/module/intelli_plug/parameters/intelli_plug_active
 
-# Enable Intelli_thermal
-chmod -h 0777 /sys/module/intelli_thermal/parameters/intelli_enabled
-echo "1" > /sys/module/intelli_thermal/parameters/intelli_enabled
-chmod -h 0666 /sys/module/intelli_thermal/parameters/intelli_enabled
-
-# Tweaks for batery (intelli thermal)
-chmod -h 0777 /sys/module/intelli_thermal/parameters/limit_temp_degC
-echo "63" > /sys/module/intelli_thermal/parameters/limit_temp_degC
-chmod -h 0666 /sys/module/intelli_thermal/parameters/limit_temp_degC
-
-chmod -h 0777 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
-echo "77" > /sys/module/intelli_thermal/parameters/core_limit_temp_degC
-chmod -h 0666 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
-
 # Enable Simple GPU algorithm.
 chmod -h 0777 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
 echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
 chmod -h 0666 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+
+sleep 0.5s
 
 #Set CPU Min Frequencies
 echo 300000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
@@ -142,6 +131,8 @@ chmod -h 0664 /sys/devices/system/cpu/cpu2/cpufreq/scaling_governor
 chmod 777 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
 write /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor "barry_allen"
 chmod -h 0664 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+
+sleep 0.5s
 
 echo 20 > /sys/module/cpu_boost/parameters/boost_ms
 echo 1497600 > /sys/module/cpu_boost/parameters/sync_threshold
@@ -282,8 +273,6 @@ echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
 
 sleep 0.5s
 
-sync
-
 #Supersu
 /system/xbin/daemonsu --auto-daemon &
 
@@ -310,8 +299,6 @@ sync
 	"allow debuggerd app_data_file dir search"
 
 sleep 0.3s
-
-sync
 
 # Iniciar SQlite
 /res/ext/sqlite.sh
@@ -354,8 +341,6 @@ echo "50" > /sys/module/zswap/parameters/max_pool_percent
 
 sleep 0.5s
 
-sync
-
 # IO_tweak
 LOOP=`ls -d /sys/block/loop* 2>/dev/null`
 RAM=`ls -d /sys/block/ram* 2>/dev/null`
@@ -382,8 +367,6 @@ done
 
 echo "2048" > /sys/devices/virtual/bdi/179:0/read_ahead_kb
 
-sync
-
 sleep 0.2s
 
 
@@ -401,8 +384,6 @@ done &
 
 sleep 0.7s
 
-sync
-
 # Enable Dynamic FSync
 chown system.system /sys/kernel/dyn_fsync/Dyn_fsync_active
 chmod -h 0777 /sys/kernel/dyn_fsync/Dyn_fsync_active
@@ -414,7 +395,7 @@ chmod -h 0777 /sys/kernel/mm/ksm/*
 chown system.system /sys/kernel/mm/ksm/run
 echo "1" > /sys/kernel/mm/ksm/run
 chown system.system /sys/kernel/mm/ksm/pages_to_scan
-echo "300" > /sys/kernel/mm/ksm/pages_to_scan
+echo "512" > /sys/kernel/mm/ksm/pages_to_scan
 chown system.system /sys/kernel/mm/ksm/sleep_millisecs
 echo "1000" > /sys/kernel/mm/ksm/sleep_millisecs
 chmod -h 0666 /sys/kernel/mm/ksm/*
@@ -431,9 +412,28 @@ chmod -h 0777 /proc/sys/kernel/random/read_wakeup_threshold
 echo "256" > /proc/sys/kernel/random/read_wakeup_threshold
 chmod -h 0666 /proc/sys/kernel/random/read_wakeup_threshold
 
-sleep 0.5s
+# Tweaks Memory
+chmod -h 0777 /proc/sys/kernel/random/write_wakeup_threshold
+echo "1376" > /proc/sys/kernel/random/write_wakeup_threshold
+chmod -h 0666 /proc/sys/kernel/random/write_wakeup_threshold
 
-sync
+chmod -h 0777 /proc/sys/vm/vfs_cache_pressure
+echo "200" /proc/sys/vm/vfs_cache_pressure
+chmod -h 0666 /proc/sys/vm/vfs_cache_pressure
+
+chmod -h 0777 /proc/sys/vm/min_free_kbyte
+echo "8192" /proc/sys/vm/min_free_kbytes
+chmod -h 0666 /proc/sys/vm/min_free_kbyte
+
+chmod -h 0777 /proc/sys/vm/dirty_expire_centisecs
+echo "300" /proc/sys/vm/dirty_expire_centisecs
+chmod -h 0666 /proc/sys/vm/dirty_expire_centisecs
+
+chmod -h 0777 /proc/sys/vm/dirty_writeback_centisecs
+echo "1500" /proc/sys/vm/dirty_writeback_centisecs
+chmod -h 0666 /proc/sys/vm/dirty_writeback_centisecs
+
+sleep 0.5s
 
 # Now wait for the rom to finish booting up
 # (by checking for any android process)
@@ -453,6 +453,16 @@ su -c "pm enable com.google.android.gsf/.update.SystemUpdatePanoActivity"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
+
+
+# Tweaks for batery (intelli thermal)
+chmod -h 0777 /sys/module/intelli_thermal/parameters/limit_temp_degC
+echo "63" > /sys/module/intelli_thermal/parameters/limit_temp_degC
+chmod -h 0666 /sys/module/intelli_thermal/parameters/limit_temp_degC
+
+chmod -h 0777 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
+echo "77" > /sys/module/intelli_thermal/parameters/core_limit_temp_degC
+chmod -h 0666 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
 
 
 # kernel custom test
@@ -481,9 +491,11 @@ fi;
 
 start thermal-engine
 
+sleep 0.2s
+
 sync
 
-# RE-Disable Mpdecision
+# Disable Mpdecision
 stop mpdecision
 
 mount -o remount,ro -t auto /
