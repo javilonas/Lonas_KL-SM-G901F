@@ -19,7 +19,7 @@
 PATH=/sbin:/system/sbin:/system/bin:/system/xbin
 export PATH
 
-# Inicio
+# Initial
 mount -o remount,rw -t auto /
 mount -t rootfs -o remount,rw rootfs
 mount -o remount,rw -t auto /system
@@ -333,9 +333,51 @@ chmod -h 0777 /sys/kernel/fast_charge/force_fast_charge
 echo "1" > /sys/kernel/fast_charge/force_fast_charge
 chmod -h 0666 /sys/kernel/fast_charge/force_fast_charge
 
-# Fix permisos
-chmod 0666 /sys/module/lowmemorykiller/parameters/minfree
-chmod 0666 /sys/module/lowmemorykiller/parameters/adj
+# Tweaks Memory
+chown root system /sys/module/lowmemorykiller/parameters/adj
+chmod -h 0666 /sys/module/lowmemorykiller/parameters/adj
+chown root system /sys/module/lowmemorykiller/parameters/minfree
+chmod -h 0666 /sys/module/lowmemorykiller/parameters/minfree
+
+chown root system /proc/sys/kernel/random/read_wakeup_threshold
+chmod -h 0777 /proc/sys/kernel/random/read_wakeup_threshold
+echo "256" > /proc/sys/kernel/random/read_wakeup_threshold
+chmod -h 0666 /proc/sys/kernel/random/read_wakeup_threshold
+
+chown root system /proc/sys/kernel/random/write_wakeup_threshold
+chmod -h 0777 /proc/sys/kernel/random/write_wakeup_threshold
+echo "512" > /proc/sys/kernel/random/write_wakeup_threshold
+chmod -h 0666 /proc/sys/kernel/random/write_wakeup_threshold
+
+chown root system /proc/sys/vm/vfs_cache_pressure
+chmod -h 0777 /proc/sys/vm/vfs_cache_pressure
+echo "10" /proc/sys/vm/vfs_cache_pressure
+chmod -h 0666 /proc/sys/vm/vfs_cache_pressure
+
+chown root system /proc/sys/vm/min_free_kbyte
+chmod -h 0777 /proc/sys/vm/min_free_kbyte
+echo "4096" /proc/sys/vm/min_free_kbytes
+chmod -h 0666 /proc/sys/vm/min_free_kbyte
+
+chown root system /proc/sys/vm/dirty_expire_centisecs
+chmod -h 0777 /proc/sys/vm/dirty_expire_centisecs
+echo "1000" /proc/sys/vm/dirty_expire_centisecs
+chmod -h 0666 /proc/sys/vm/dirty_expire_centisecs
+
+chown root system /proc/sys/vm/dirty_writeback_centisecs
+chmod -h 0777 /proc/sys/vm/dirty_writeback_centisecs
+echo "2000" /proc/sys/vm/dirty_writeback_centisecs
+chmod -h 0666 /proc/sys/vm/dirty_writeback_centisecs
+
+chown root system /proc/sys/vm/dirty_background_ratio
+chmod -h 0777 /proc/sys/vm/dirty_background_ratio
+echo "80" /proc/sys/vm/dirty_background_ratio
+chmod -h 0666 /proc/sys/vm/dirty_background_ratio
+
+chown root system /proc/sys/vm/dirty_ratio
+chmod -h 0777 /proc/sys/vm/dirty_ratio
+echo "90" > /proc/sys/vm/dirty_ratio
+chmod -h 0666 /proc/sys/vm/dirty_ratio
 
 echo "50" > /sys/module/zswap/parameters/max_pool_percent
 
@@ -372,8 +414,8 @@ sleep 0.2s
 
 busy=/sbin/busybox;
 
-# lmk tweaks for fewer empty background processes
-minfree=7628,9768,11909,14515,16655,20469;
+# lmk tweaks for fewer empty background processes (default medium)
+minfree=1024,2048,4096,8192,12288,16384;
 lmk=/sys/module/lowmemorykiller/parameters/minfree;
 minboot=`cat $lmk`;
 while sleep 1; do
@@ -382,7 +424,7 @@ while sleep 1; do
 	fi;
 done &
 
-sleep 0.7s
+sleep 0.3s
 
 # Enable Dynamic FSync
 chown system.system /sys/kernel/dyn_fsync/Dyn_fsync_active
@@ -408,30 +450,10 @@ if [ -e /sys/module/lowmemorykiller/parameters/debug_level ]; then
 fi
 
 # enlarger seeder
+chown root system /proc/sys/kernel/random/read_wakeup_threshold
 chmod -h 0777 /proc/sys/kernel/random/read_wakeup_threshold
 echo "256" > /proc/sys/kernel/random/read_wakeup_threshold
 chmod -h 0666 /proc/sys/kernel/random/read_wakeup_threshold
-
-# Tweaks Memory
-chmod -h 0777 /proc/sys/kernel/random/write_wakeup_threshold
-echo "1376" > /proc/sys/kernel/random/write_wakeup_threshold
-chmod -h 0666 /proc/sys/kernel/random/write_wakeup_threshold
-
-chmod -h 0777 /proc/sys/vm/vfs_cache_pressure
-echo "200" /proc/sys/vm/vfs_cache_pressure
-chmod -h 0666 /proc/sys/vm/vfs_cache_pressure
-
-chmod -h 0777 /proc/sys/vm/min_free_kbyte
-echo "8192" /proc/sys/vm/min_free_kbytes
-chmod -h 0666 /proc/sys/vm/min_free_kbyte
-
-chmod -h 0777 /proc/sys/vm/dirty_expire_centisecs
-echo "300" /proc/sys/vm/dirty_expire_centisecs
-chmod -h 0666 /proc/sys/vm/dirty_expire_centisecs
-
-chmod -h 0777 /proc/sys/vm/dirty_writeback_centisecs
-echo "1500" /proc/sys/vm/dirty_writeback_centisecs
-chmod -h 0666 /proc/sys/vm/dirty_writeback_centisecs
 
 sleep 0.5s
 
