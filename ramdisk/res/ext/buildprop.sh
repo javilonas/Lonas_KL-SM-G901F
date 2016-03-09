@@ -19,13 +19,10 @@
 sleep 1
 # Launcher and Touch
 setprop ro.HOME_APP_ADJ=1
-setprop debug.performance.tuning=1
-setprop video.accelerate.hw=1
 
 # Battery and Wifi
-setprop wifi.supplicant_scan_interval=190
+setprop wifi.supplicant_scan_interval=497
 setprop pm.sleep_mode=1
-setprop ro.ril.disable.power.collapse=1
 setprop ro.mot.eri.losalert.delay=1000
 setprop profiler.force_disable_err_rpt=1
 setprop profiler.force_disable_ulog=1
@@ -34,9 +31,6 @@ setprop ro.config.nocheckin=1
 # Fix App
 setprop ro.kernel.android.checkjni=0
 setprop ro.telephony.call_ring.delay=0
-
-# GPU
-setprop debug.sf.hw=1
 
 # Sleep Mode
 setprop ro.ril.sensor.sleep.control=1

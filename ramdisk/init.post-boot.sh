@@ -63,6 +63,11 @@ if [ -x /system/xbin/busybox ]; then
 	set_environment
 fi
 
+# Remontar y Optimizar particiones con EXT4
+/res/ext/optimi_remount.sh
+
+sleep 0.9s
+
 # Enable Intelli_thermal
 chmod -h 0777 /sys/module/intelli_thermal/parameters/enabled
 echo "Y" > /sys/module/intelli_thermal/parameters/enabled
@@ -149,9 +154,11 @@ chown -h system /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
 chown -h root.system /sys/devices/system/cpu/cpu1/online
 chown -h root.system /sys/devices/system/cpu/cpu2/online
 chown -h root.system /sys/devices/system/cpu/cpu3/online
-chmod -h 664 /sys/devices/system/cpu/cpu1/online
-chmod -h 664 /sys/devices/system/cpu/cpu2/online
-chmod -h 664 /sys/devices/system/cpu/cpu3/online
+chown -h system.system /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
+chmod -h 0664 /sys/devices/system/cpu/cpu1/online
+chmod -h 0664 /sys/devices/system/cpu/cpu2/online
+chmod -h 0664 /sys/devices/system/cpu/cpu3/online
+chmod -h 0664 /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
 
 # Change barry_allen sysfs permission
 chown -h system.system /sys/devices/system/cpu/cpufreq/barry_allen/timer_rate
@@ -268,8 +275,11 @@ chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/max_freq
 chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/min_freq
 
 #Set default values on boot
-echo "200000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
+echo "240000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
 echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
+
+# -25mv (Ahorro batería ON)
+echo "655 665 675 685 695 705 715 725 735 795 805 815 825 835 845 855 865 875 885 895 905 915 925 935 950 965 980 995 1010 1015 1030 1045" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
 
 sleep 0.5s
 
@@ -317,6 +327,9 @@ sleep 0.3s
 
 # Init Default tweaks buildprop
 /res/ext/buildprop.sh
+
+# Init Libera_ram
+/res/ext/libera_ram.sh
 
 # Kernel panic setup
 if [ -e /proc/sys/kernel/panic_on_oops ]; then 
@@ -421,7 +434,7 @@ sleep 0.2s
 busy=/sbin/busybox;
 
 # lmk tweaks for fewer empty background processes
-minfree=7628,9768,11909,14515,16655,20469;
+minfree=12288,15360,18432,21504,24576,30720;
 lmk=/sys/module/lowmemorykiller/parameters/minfree;
 minboot=`cat $lmk`;
 while sleep 1; do
@@ -429,6 +442,34 @@ while sleep 1; do
 		[ `cat $lmk` != $minfree ] && echo $minfree > $lmk || exit;
 	fi;
 done &
+
+# wait for systemui and increase its priority
+while sleep 1; do
+	if [ `$busy pidof com.android.systemui` ]; then
+		systemui=`$busy pidof com.android.systemui`;
+		$busy renice -18 $systemui;
+		$busy echo -17 > /proc/$systemui/oom_adj;
+		$busy chmod 100 /proc/$systemui/oom_adj;
+		exit;
+	fi;
+done &
+
+# lmk whitelist for common launchers and increase launcher priority
+list="com.android.launcher com.android.launcher2 com.sec.android.app.launcher com.google.android.googlequicksearchbox org.adw.launcher org.adwfreak.launcher net.alamoapps.launcher com.anddoes.launcher com.android.lmt com.chrislacy.actionlauncher.pro com.cyanogenmod.trebuchet com.gau.go.launcherex com.gtp.nextlauncher com.miui.mihome2 com.mobint.hololauncher com.mobint.hololauncher.hd com.qihoo360.launcher com.teslacoilsw.launcher com.teslacoilsw.launcher.prime com.tsf.shell org.zeam";
+while sleep 60; do
+	for class in $list; do
+		if [ `$busy pgrep $class | head -n 1` ]; then
+			launcher=`$busy pgrep $class`;
+			$busy echo -17 > /proc/$launcher/oom_adj;
+			$busy chmod 100 /proc/$launcher/oom_adj;
+			$busy renice -18 $launcher;
+		fi;
+	done;
+	exit;
+done &
+
+# kill radio logcat to sdcard
+$busy pkill -f "logcat -b radio -v time";
 
 sleep 0.3s
 
@@ -482,7 +523,6 @@ su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
 
-
 # Tweaks for batery (intelli thermal)
 chmod -h 0777 /sys/module/intelli_thermal/parameters/limit_temp_degC
 echo "63" > /sys/module/intelli_thermal/parameters/limit_temp_degC
@@ -491,6 +531,10 @@ chmod -h 0666 /sys/module/intelli_thermal/parameters/limit_temp_degC
 chmod -h 0777 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
 echo "77" > /sys/module/intelli_thermal/parameters/core_limit_temp_degC
 chmod -h 0666 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
+
+# Turn off debugging for certain modules
+echo "0" > /sys/module/alarm_dev/parameters/debug_mask
+echo "0" > /sys/module/msm_pm/parameters/debug_mask
 
 # Tweaks Net
 chmod -h 0777 /proc/sys/net/*
