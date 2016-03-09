@@ -300,17 +300,23 @@ sleep 0.5s
 
 sleep 0.3s
 
-# Iniciar SQlite
+# Init KILL
+/res/ext/killing.sh
+
+# Init SQlite
 /res/ext/sqlite.sh
 
-# Iniciar Zipalign
+# Init Zipalign
 /res/ext/zipalign.sh
 
-# Iniciar Wifi Sleeper
+# Init Wifi Sleeper
 /res/ext/Wifi_sleeper.sh
 
-# Iniciar Kernel Sleepers
+# Init Kernel Sleepers
 /res/ext/Kernel_sleepers.sh
+
+# Init Default tweaks buildprop
+/res/ext/buildprop.sh
 
 # Kernel panic setup
 if [ -e /proc/sys/kernel/panic_on_oops ]; then 
@@ -414,8 +420,8 @@ sleep 0.2s
 
 busy=/sbin/busybox;
 
-# lmk tweaks for fewer empty background processes (default medium)
-minfree=1024,2048,4096,8192,12288,16384;
+# lmk tweaks for fewer empty background processes
+minfree=7628,9768,11909,14515,16655,20469;
 lmk=/sys/module/lowmemorykiller/parameters/minfree;
 minboot=`cat $lmk`;
 while sleep 1; do
@@ -486,6 +492,50 @@ chmod -h 0777 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
 echo "77" > /sys/module/intelli_thermal/parameters/core_limit_temp_degC
 chmod -h 0666 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
 
+# Tweaks Net
+chmod -h 0777 /proc/sys/net/*
+sysctl -e -w net.unix.max_dgram_qlen=50
+sysctl -e -w net.ipv4.tcp_moderate_rcvbuf=1
+sysctl -e -w net.ipv4.route.flush=1
+sysctl -e -w net.ipv4.udp_rmem_min=6144
+sysctl -e -w net.ipv4.udp_wmem_min=6144
+sysctl -e -w net.ipv4.tcp_rfc1337=1
+sysctl -e -w net.ipv4.ip_no_pmtu_disc=0
+sysctl -e -w net.ipv4.tcp_ecn=0
+sysctl -e -w net.ipv4.tcp_timestamps=0
+sysctl -e -w net.ipv4.tcp_sack=1
+sysctl -e -w net.ipv4.tcp_dsack=1
+sysctl -e -w net.ipv4.tcp_low_latency=1
+sysctl -e -w net.ipv4.tcp_fack=1
+sysctl -e -w net.ipv4.tcp_window_scaling=1
+sysctl -e -w net.ipv4.tcp_tw_recycle=1
+sysctl -e -w net.ipv4.tcp_tw_reuse=1
+sysctl -e -w net.ipv4.tcp_congestion_control=cubic
+sysctl -e -w net.ipv4.tcp_syncookies=1
+sysctl -e -w net.ipv4.tcp_synack_retries=2
+sysctl -e -w net.ipv4.tcp_syn_retries=2
+sysctl -e -w net.ipv4.tcp_max_syn_backlog=1024
+sysctl -e -w net.ipv4.tcp_max_tw_buckets=16384
+sysctl -e -w net.ipv4.icmp_echo_ignore_all=1
+sysctl -e -w net.ipv4.icmp_echo_ignore_broadcasts=1
+sysctl -e -w net.ipv4.icmp_ignore_bogus_error_responses=1
+sysctl -e -w net.ipv4.tcp_no_metrics_save=1
+sysctl -e -w net.ipv4.tcp_fin_timeout=15
+sysctl -e -w net.ipv4.tcp_keepalive_intvl=30
+sysctl -e -w net.ipv4.tcp_keepalive_probes=5
+sysctl -e -w net.ipv4.tcp_keepalive_time=1800
+sysctl -e -w net.ipv4.ip_forward=0
+sysctl -e -w net.ipv4.conf.all.send_redirects=0
+sysctl -e -w net.ipv4.conf.default.send_redirects=0
+sysctl -e -w net.ipv4.conf.all.rp_filter=1
+sysctl -e -w net.ipv4.conf.default.rp_filter=1
+sysctl -e -w net.ipv4.conf.all.accept_source_route=0
+sysctl -e -w net.ipv4.conf.default.accept_source_route=0 
+sysctl -e -w net.ipv4.conf.all.accept_redirects=0
+sysctl -e -w net.ipv4.conf.default.accept_redirects=0
+sysctl -e -w net.ipv4.conf.all.secure_redirects=0
+sysctl -e -w net.ipv4.conf.default.secure_redirects=0
+chmod -h 0644 /proc/sys/net/*
 
 # kernel custom test
 if [ -e /data/lonastest.log ]; then
