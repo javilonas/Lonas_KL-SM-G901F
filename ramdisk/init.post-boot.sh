@@ -278,8 +278,8 @@ chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/min_freq
 echo "240000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
 echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
 
-# -25mv (Ahorro batería ON)
-echo "655 665 675 685 695 705 715 725 735 795 805 815 825 835 845 855 865 875 885 895 905 915 925 935 950 965 980 995 1010 1015 1030 1045" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
+# -10mv (Ahorro batería ON)
+echo "670 680 690 700 710 720 730 740 750 810 820 830 840 850 860 870 880 890 900 910 920 930 940 950 965 980 995 1010 1025 1030 1045 1060" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
 
 sleep 0.5s
 
@@ -328,8 +328,8 @@ sleep 0.3s
 # Init Default tweaks buildprop
 /res/ext/buildprop.sh
 
-# Init Libera_ram
-/res/ext/libera_ram.sh
+# Init Gps
+/res/ext/gps.sh
 
 # Kernel panic setup
 if [ -e /proc/sys/kernel/panic_on_oops ]; then 
@@ -345,12 +345,6 @@ fi
 # Tweaks (Javilonas)
 echo "5" > /proc/sys/vm/laptop_mode
 echo "8" > /proc/sys/vm/page-cluster
-
-# Carga Rápida
-chown system.system /sys/kernel/fast_charge/force_fast_charge
-chmod -h 0777 /sys/kernel/fast_charge/force_fast_charge
-echo "1" > /sys/kernel/fast_charge/force_fast_charge
-chmod -h 0666 /sys/kernel/fast_charge/force_fast_charge
 
 # Tweaks Memory
 chown root system /sys/module/lowmemorykiller/parameters/adj
@@ -373,10 +367,20 @@ chmod -h 0777 /proc/sys/vm/vfs_cache_pressure
 echo "10" /proc/sys/vm/vfs_cache_pressure
 chmod -h 0666 /proc/sys/vm/vfs_cache_pressure
 
-chown root system /proc/sys/vm/min_free_kbyte
-chmod -h 0777 /proc/sys/vm/min_free_kbyte
-echo "4096" /proc/sys/vm/min_free_kbytes
-chmod -h 0666 /proc/sys/vm/min_free_kbyte
+chown root system /proc/sys/vm/min_free_kbytes
+chmod -h 0777 /proc/sys/vm/min_free_kbytes
+echo "8192" /proc/sys/vm/min_free_kbytes
+chmod -h 0666 /proc/sys/vm/min_free_kbytes
+
+chown root system /proc/sys/vm/min_free_order_shif
+chmod -h 0777 /proc/sys/vm/min_free_order_shif
+echo "2" > /proc/sys/vm/min_free_order_shif
+chmod -h 0666 /proc/sys/vm/min_free_order_shif
+
+chown root system /proc/sys/vm/overcommit_ratio
+chmod -h 0777 /proc/sys/vm/overcommit_ratio
+echo "50" > /proc/sys/vm/overcommit_ratio
+chmod -h 0666 /proc/sys/vm/overcommit_ratio
 
 chown root system /proc/sys/vm/dirty_expire_centisecs
 chmod -h 0777 /proc/sys/vm/dirty_expire_centisecs
@@ -397,8 +401,6 @@ chown root system /proc/sys/vm/dirty_ratio
 chmod -h 0777 /proc/sys/vm/dirty_ratio
 echo "90" > /proc/sys/vm/dirty_ratio
 chmod -h 0666 /proc/sys/vm/dirty_ratio
-
-echo "50" > /sys/module/zswap/parameters/max_pool_percent
 
 sleep 0.5s
 
@@ -427,67 +429,11 @@ do
 done
 
 echo "2048" > /sys/devices/virtual/bdi/179:0/read_ahead_kb
-
-sleep 0.2s
-
-
-busy=/sbin/busybox;
-
-# lmk tweaks for fewer empty background processes
-minfree=12288,15360,18432,21504,24576,30720;
-lmk=/sys/module/lowmemorykiller/parameters/minfree;
-minboot=`cat $lmk`;
-while sleep 1; do
-	if [ `cat $lmk` != $minboot ]; then
-		[ `cat $lmk` != $minfree ] && echo $minfree > $lmk || exit;
-	fi;
-done &
-
-# wait for systemui and increase its priority
-while sleep 1; do
-	if [ `$busy pidof com.android.systemui` ]; then
-		systemui=`$busy pidof com.android.systemui`;
-		$busy renice -18 $systemui;
-		$busy echo -17 > /proc/$systemui/oom_adj;
-		$busy chmod 100 /proc/$systemui/oom_adj;
-		exit;
-	fi;
-done &
-
-# lmk whitelist for common launchers and increase launcher priority
-list="com.android.launcher com.android.launcher2 com.sec.android.app.launcher com.google.android.googlequicksearchbox org.adw.launcher org.adwfreak.launcher net.alamoapps.launcher com.anddoes.launcher com.android.lmt com.chrislacy.actionlauncher.pro com.cyanogenmod.trebuchet com.gau.go.launcherex com.gtp.nextlauncher com.miui.mihome2 com.mobint.hololauncher com.mobint.hololauncher.hd com.qihoo360.launcher com.teslacoilsw.launcher com.teslacoilsw.launcher.prime com.tsf.shell org.zeam";
-while sleep 60; do
-	for class in $list; do
-		if [ `$busy pgrep $class | head -n 1` ]; then
-			launcher=`$busy pgrep $class`;
-			$busy echo -17 > /proc/$launcher/oom_adj;
-			$busy chmod 100 /proc/$launcher/oom_adj;
-			$busy renice -18 $launcher;
-		fi;
-	done;
-	exit;
-done &
-
-# kill radio logcat to sdcard
-$busy pkill -f "logcat -b radio -v time";
+#echo "256" > /sys/block/mmcblk1/queue/read_ahead_kb
+#echo "512" > /sys/block/mmcblk0/queue/read_ahead_kb
+#echo "256" > /sys/block/mmcblk0rpmb/queue/read_ahead_kb
 
 sleep 0.3s
-
-# Enable Dynamic FSync
-chown system.system /sys/kernel/dyn_fsync/Dyn_fsync_active
-chmod -h 0777 /sys/kernel/dyn_fsync/Dyn_fsync_active
-echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
-chmod -h 0666 /sys/kernel/dyn_fsync/Dyn_fsync_active
-
-# Enable KSM and optimice Tweaks
-chmod -h 0777 /sys/kernel/mm/ksm/*
-chown system.system /sys/kernel/mm/ksm/run
-echo "1" > /sys/kernel/mm/ksm/run
-chown system.system /sys/kernel/mm/ksm/pages_to_scan
-echo "512" > /sys/kernel/mm/ksm/pages_to_scan
-chown system.system /sys/kernel/mm/ksm/sleep_millisecs
-echo "1000" > /sys/kernel/mm/ksm/sleep_millisecs
-chmod -h 0666 /sys/kernel/mm/ksm/*
 
 # Debug level
 if [ -e /sys/module/lowmemorykiller/parameters/debug_level ]; then
@@ -502,7 +448,62 @@ chmod -h 0777 /proc/sys/kernel/random/read_wakeup_threshold
 echo "256" > /proc/sys/kernel/random/read_wakeup_threshold
 chmod -h 0666 /proc/sys/kernel/random/read_wakeup_threshold
 
+# Carga Rápida
+chown system.system /sys/kernel/fast_charge/force_fast_charge
+chmod -h 0777 /sys/kernel/fast_charge/force_fast_charge
+echo "1" > /sys/kernel/fast_charge/force_fast_charge
+chmod -h 0666 /sys/kernel/fast_charge/force_fast_charge
+
+# Enable KSM and optimice Tweaks
+chmod -h 0777 /sys/kernel/mm/ksm/*
+chown system.system /sys/kernel/mm/ksm/run
+#echo "1" > /sys/kernel/mm/ksm/run
+chown system.system /sys/kernel/mm/ksm/pages_to_scan
+echo "512" > /sys/kernel/mm/ksm/pages_to_scan
+chown system.system /sys/kernel/mm/ksm/sleep_millisecs
+echo "1000" > /sys/kernel/mm/ksm/sleep_millisecs
+chmod -h 0666 /sys/kernel/mm/ksm/*
+
+# Tweaks for batery (intelli thermal)
+chmod -h 0777 /sys/module/intelli_thermal/parameters/limit_temp_degC
+echo "65" > /sys/module/intelli_thermal/parameters/limit_temp_degC
+chmod -h 0666 /sys/module/intelli_thermal/parameters/limit_temp_degC
+
+chmod -h 0777 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
+echo "77" > /sys/module/intelli_thermal/parameters/core_limit_temp_degC
+chmod -h 0666 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
+
+chmod -h 0777 /sys/module/intelli_plug/parameters/cpu_nr_run_threshold
+echo "400" > /sys/module/intelli_plug/parameters/cpu_nr_run_threshold
+chmod -h 0666 /sys/module/intelli_plug/parameters/cpu_nr_run_threshold
+
+chmod -h 0777 /sys/module/intelli_plug/parameters/nr_run_hysteresis
+echo "12" > /sys/module/intelli_plug/parameters/nr_run_hysteresis
+chmod -h 0666 /sys/module/intelli_plug/parameters/nr_run_hysteresis
+
+echo "883200" > /sys/module/intelli_plug/parameters/screen_off_max
+echo "0" > /sys/module/intelli_plug/parameters/touch_boost_active
+echo "2" > /sys/module/intelli_plug/parameters/nr_run_profile_sel
+
+# Activate simple GPU alogarithm
+echo "4" > /sys/module/simple_gpu_algorithm/parameters/simple_laziness
+echo "6000" > /sys/module/simple_gpu_algorithm/parameters/simple_ramp_threshold
+
+echo "50" > /sys/module/zswap/parameters/max_pool_percent
+
 sleep 0.5s
+
+busy=/sbin/busybox;
+
+# lmk tweaks for fewer empty background processes
+minfree=7628,9768,11909,14515,16655,20469;
+lmk=/sys/module/lowmemorykiller/parameters/minfree;
+minboot=`cat $lmk`;
+while sleep 1; do
+	if [ `cat $lmk` != $minboot ]; then
+		[ `cat $lmk` != $minfree ] && echo $minfree > $lmk || exit;
+	fi;
+done &
 
 # Now wait for the rom to finish booting up
 # (by checking for any android process)
@@ -523,64 +524,6 @@ su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
 su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
 
-# Tweaks for batery (intelli thermal)
-chmod -h 0777 /sys/module/intelli_thermal/parameters/limit_temp_degC
-echo "63" > /sys/module/intelli_thermal/parameters/limit_temp_degC
-chmod -h 0666 /sys/module/intelli_thermal/parameters/limit_temp_degC
-
-chmod -h 0777 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
-echo "77" > /sys/module/intelli_thermal/parameters/core_limit_temp_degC
-chmod -h 0666 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
-
-# Turn off debugging for certain modules
-echo "0" > /sys/module/alarm_dev/parameters/debug_mask
-echo "0" > /sys/module/msm_pm/parameters/debug_mask
-
-# Tweaks Net
-chmod -h 0777 /proc/sys/net/*
-sysctl -e -w net.unix.max_dgram_qlen=50
-sysctl -e -w net.ipv4.tcp_moderate_rcvbuf=1
-sysctl -e -w net.ipv4.route.flush=1
-sysctl -e -w net.ipv4.udp_rmem_min=6144
-sysctl -e -w net.ipv4.udp_wmem_min=6144
-sysctl -e -w net.ipv4.tcp_rfc1337=1
-sysctl -e -w net.ipv4.ip_no_pmtu_disc=0
-sysctl -e -w net.ipv4.tcp_ecn=0
-sysctl -e -w net.ipv4.tcp_timestamps=0
-sysctl -e -w net.ipv4.tcp_sack=1
-sysctl -e -w net.ipv4.tcp_dsack=1
-sysctl -e -w net.ipv4.tcp_low_latency=1
-sysctl -e -w net.ipv4.tcp_fack=1
-sysctl -e -w net.ipv4.tcp_window_scaling=1
-sysctl -e -w net.ipv4.tcp_tw_recycle=1
-sysctl -e -w net.ipv4.tcp_tw_reuse=1
-sysctl -e -w net.ipv4.tcp_congestion_control=cubic
-sysctl -e -w net.ipv4.tcp_syncookies=1
-sysctl -e -w net.ipv4.tcp_synack_retries=2
-sysctl -e -w net.ipv4.tcp_syn_retries=2
-sysctl -e -w net.ipv4.tcp_max_syn_backlog=1024
-sysctl -e -w net.ipv4.tcp_max_tw_buckets=16384
-sysctl -e -w net.ipv4.icmp_echo_ignore_all=1
-sysctl -e -w net.ipv4.icmp_echo_ignore_broadcasts=1
-sysctl -e -w net.ipv4.icmp_ignore_bogus_error_responses=1
-sysctl -e -w net.ipv4.tcp_no_metrics_save=1
-sysctl -e -w net.ipv4.tcp_fin_timeout=15
-sysctl -e -w net.ipv4.tcp_keepalive_intvl=30
-sysctl -e -w net.ipv4.tcp_keepalive_probes=5
-sysctl -e -w net.ipv4.tcp_keepalive_time=1800
-sysctl -e -w net.ipv4.ip_forward=0
-sysctl -e -w net.ipv4.conf.all.send_redirects=0
-sysctl -e -w net.ipv4.conf.default.send_redirects=0
-sysctl -e -w net.ipv4.conf.all.rp_filter=1
-sysctl -e -w net.ipv4.conf.default.rp_filter=1
-sysctl -e -w net.ipv4.conf.all.accept_source_route=0
-sysctl -e -w net.ipv4.conf.default.accept_source_route=0 
-sysctl -e -w net.ipv4.conf.all.accept_redirects=0
-sysctl -e -w net.ipv4.conf.default.accept_redirects=0
-sysctl -e -w net.ipv4.conf.all.secure_redirects=0
-sysctl -e -w net.ipv4.conf.default.secure_redirects=0
-chmod -h 0644 /proc/sys/net/*
-
 # kernel custom test
 if [ -e /data/lonastest.log ]; then
 	rm /data/lonastest.log
@@ -591,6 +534,10 @@ echo "excecuted on $(date +"%d-%m-%Y %r" )" >> /data/lonastest.log
 echo  Done ! >> /data/lonastest.log
 
 sleep 0.5s
+
+$busy fstrim -v /system >> /data/lonastest.log
+$busy fstrim -v /cache >> /data/lonastest.log
+$busy fstrim -v /data >> /data/lonastest.log
 
 sync
 
@@ -611,7 +558,7 @@ sleep 0.2s
 
 sync
 
-# Disable Mpdecision
+# Force Disable Mpdecision
 stop mpdecision
 
 mount -o remount,ro -t auto /

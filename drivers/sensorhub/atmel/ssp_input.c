@@ -446,7 +446,7 @@ void report_prox_data(struct ssp_data *data, struct sensor_value *proxdata)
 		(!proxdata->prox[0]));
 	input_sync(data->prox_input_dev);
 
-	wake_lock_timeout(&data->ssp_wake_lock, 1 * HZ);
+	wake_lock_timeout(&data->ssp_wake_lock, HZ / 8);
 }
 
 void report_prox_raw_data(struct ssp_data *data,
@@ -512,7 +512,7 @@ void report_temp_humidity_data(struct ssp_data *data,
 		data->buf[TEMPERATURE_HUMIDITY_SENSOR].y);
 	input_sync(data->temp_humi_input_dev);
 	if (data->buf[TEMPERATURE_HUMIDITY_SENSOR].z)
-		wake_lock_timeout(&data->ssp_wake_lock, 1 * HZ);
+		wake_lock_timeout(&data->ssp_wake_lock, HZ / 8);
 }
 
 int initialize_event_symlink(struct ssp_data *data)

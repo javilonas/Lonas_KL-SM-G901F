@@ -1106,7 +1106,7 @@ static irqreturn_t sx9306_interrupt_thread(int irq, void *pdata)
 	if (sx9306_get_nirq_state(data) == 1) {
 		pr_err("[SX9306]: %s - nirq read high\n", __func__);
 	} else {
-		wake_lock_timeout(&data->grip_wake_lock, 3 * HZ);
+		wake_lock_timeout(&data->grip_wake_lock, HZ / 8);
 		schedule_delayed_work(&data->irq_work, msecs_to_jiffies(100));
 	}
 

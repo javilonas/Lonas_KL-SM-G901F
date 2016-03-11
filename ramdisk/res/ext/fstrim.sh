@@ -1,6 +1,6 @@
 #!/system/bin/sh
 #
-# Copyright (c) 2016 Javier Sayago <admin@lonasdigital.com>
+# Copyright (c) 2015 Javier Sayago <admin@lonasdigital.com>
 # Contact: javilonas@esp-desarrolladores.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,19 +15,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# libera pagecache cada 3 horas si esta está por debajo de 20360 kbytes
-#
 
-/sbin/busybox renice 19 `pidof libera_ram.sh`
-FREE=`free -m | grep -i mem | awk '{print $4}'`
+sleep 1
+exec 2>&1 > /dev/kmsg
 
-while [ 1 ];
-do
-	if [ $FREE -lt 20360 ]; then
-		sync
-		echo "3" > /proc/sys/vm/drop_caches
-		sleep 1
-		echo "0" > /proc/sys/vm/drop_caches
-	fi
-sleep 10800
-done
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
+
+fstrim -v /system
+fstrim -v /cache
+fstrim -v /data
+
+sync

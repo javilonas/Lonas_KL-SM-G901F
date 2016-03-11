@@ -21,6 +21,8 @@
 	pm disable com.sec.knox.bridge
 	pm disable com.sec.enterprise.knox.attestation
 	pm disable com.sec.knox.knoxsetupwizardclient
-	pm disable com.samsung.knox.rcp.components	
+	pm disable com.samsung.knox.rcp.components
 	pm disable com.samsung.android.securitylogagent
+	pm disable com.sec.knox.seandroid
+	setenforce 0
 
