@@ -16,6 +16,9 @@
 # limitations under the License.
 #
 
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
+
 # Disable knox
 	pm disable com.sec.enterprise.knox.cloudmdm.smdms
 	pm disable com.sec.knox.bridge

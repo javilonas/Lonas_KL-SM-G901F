@@ -18,6 +18,9 @@
 # script optimi_remount.sh - by Javilonas
 #
 
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
+
 # Remontar todas las particiones con noatime
 for k in $(mount | grep relatime | cut -d " " -f3)
 do

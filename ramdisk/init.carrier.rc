@@ -78,7 +78,6 @@ on boot
 
 # TODO: replace it with device's DEXPREOPT_BOOT_JARS
 
-
 #Private Mode
 service privatemode /system/bin/sdcard /data/privatemode /mnt/shell/privatemode 1000 1000
     class late_start
@@ -97,14 +96,6 @@ service swapon /sbin/sswap -s
     group root
     seclabel u:r:sswap:s0
     oneshot
-
-# CP2
-#service cpboot-daemon /sbin/cbd -d -p 22
-#    class main
-#    user root
-#    group radio cache inet misc audio sdcard_rw log sdcard_r
-#    seclabel u:r:cbd:s0
-#    onrestart restart ril-daemon2
 
 # Bluetooth dhcpcd config
 service dhcpcd_bt-pan /system/bin/dhcpcd -ABKL

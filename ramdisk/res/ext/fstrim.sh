@@ -19,11 +19,12 @@
 sleep 1
 exec 2>&1 > /dev/kmsg
 
+fstrim=/sbin/fstrim
 PATH=/sbin:/system/sbin:/system/bin:/system/xbin
 export PATH
 
-fstrim -v /system
-fstrim -v /cache
-fstrim -v /data
+$fstrim -v /system
+$fstrim -v /cache
+$fstrim -v /data
 
 sync

@@ -245,7 +245,7 @@ GRAPHITE_FLAGS	= -fgraphite -floop-flatten -floop-parallelize-all \
 
 HOSTCC       = ccache gcc
 HOSTCXX      = ccache g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -fgcse-las -pipe -DNDEBUG -std=gnu89 $(GRAPHITE_FLAGS)
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -fgcse-las -pipe -DNDEBUG -std=gnu90 $(GRAPHITE_FLAGS)
 HOSTCXXFLAGS = -O2 -pipe -DNDEBUG
 
 # Decide whether to build built-in, modular, or both.
@@ -381,14 +381,13 @@ LINUXINCLUDE    := \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+KBUILD_CFLAGS   := -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
-		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -Wno-sequence-point \
- 		   -Wno-unused-function \
+		   -Wno-switch-bool \
 		   -fno-delete-null-pointer-checks \
-		   -std=gnu89 $(GRAPHITE_FLAGS) $(KERNELFLAGS)
+		   -std=gnu90 $(GRAPHITE_FLAGS) $(KERNELFLAGS)
 
 # L1/L2 cache size parameters
 KBUILD_CFLAGS	+= --param l1-cache-size=32 --param l1-cache-line-size=64 --param l2-cache-size=2048

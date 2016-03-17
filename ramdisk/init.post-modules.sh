@@ -25,17 +25,17 @@ mount -o remount,rw -t auto /system/etc/wifi/
 mount -o remount,rw -t auto /system/etc/firmware/wlan/qca_cld/
 mount -t rootfs -o remount,rw rootfs
 
-cp -f -R /res/modules/*.ko /system/lib/modules/
+cp -f -R /res/modules/*.ko /system/lib/modules/ > /dev/null 2>&1
 sync
-cp -f -R /res/etc/firmware/wlan/qca_cld/WCNSS_cfg.dat /system/etc/firmware/wlan/qca_cld/
-cp -f -R /res/etc/firmware/wlan/qca_cld/*.ini /system/etc/firmware/wlan/qca_cld/
-cp -f -R /res/etc/firmware/wlan/qca_cld/*.bin /system/etc/firmware/wlan/qca_cld/
+cp -f -R /res/etc/firmware/wlan/qca_cld/WCNSS_cfg.dat /system/etc/firmware/wlan/qca_cld/ > /dev/null 2>&1
+cp -f -R /res/etc/firmware/wlan/qca_cld/*.ini /system/etc/firmware/wlan/qca_cld/ > /dev/null 2>&1
+cp -f -R /res/etc/firmware/wlan/qca_cld/*.bin /system/etc/firmware/wlan/qca_cld/ > /dev/null 2>&1
 sync
-cp -f -R /res/etc/wifi/*.conf /system/etc/wifi/
-cp -f -R /res/etc/wifi/*.ini /system/etc/wifi/
-cp -f -R /res/etc/wifi/*.bin /system/etc/wifi/
+cp -f -R /res/etc/wifi/*.conf /system/etc/wifi/ > /dev/null 2>&1
+cp -f -R /res/etc/wifi/*.ini /system/etc/wifi/ > /dev/null 2>&1
+cp -f -R /res/etc/wifi/*.bin /system/etc/wifi/ > /dev/null 2>&1
 sync
-sed -i s/560/480/ /system/build.prop
+sed -i s/560/480/ /system/build.prop > /dev/null 2>&1
 
 mount -t rootfs -o remount,ro rootfs
 mount -o remount,rw -t auto /system/etc/firmware/wlan/qca_cld/

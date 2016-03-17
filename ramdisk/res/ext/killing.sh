@@ -16,6 +16,9 @@
 # limitations under the License.
 #
 
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
+
 echo "............Closing APPS before init";
 
 killall -q kswapd0

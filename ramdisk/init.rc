@@ -12,7 +12,7 @@ import /init.trace.rc
 import /init.post-modules.rc
 import /init.custom.rc
 import /init.carrier.rc
-import /init.container.rc
+#import /init.container.rc
 import /init.rilcommon.rc
 
 on early-init
@@ -90,6 +90,7 @@ on init
 
     mkdir /.system
     mkdir /system
+    mkdir /su 0755 root root # create mount point for SuperSU
     mkdir /data 0771 system system
     mkdir /cache 0770 system cache
     mkdir /config 0500 root root
@@ -1200,12 +1201,8 @@ on nonencrypted
     class_start main
     class_start late_start
 
-on property:vold.decrypt=trigger_default_encryption
-    start defaultcrypto
-
 on property:vold.decrypt=trigger_encryption
     start surfaceflinger
-    start encrypt
 
 on property:sys.init_log_level=*
     loglevel ${sys.init_log_level}
@@ -1519,20 +1516,6 @@ service media /system/bin/mediaserver
     user media
     group system audio camera inet net_bt net_bt_admin net_raw net_bw_acct drmrpc sdcard_r shell mediadrm qcom_diag lgt_gid media_rw radio
     ioprio rt 4
-
-# One shot invocation to deal with encrypted volume.
-service defaultcrypto /system/bin/vdc --wait cryptfs mountdefaultencrypted
-    disabled
-    oneshot
-    # vold will set vold.decrypt to trigger_restart_framework (default
-    # encryption) or trigger_restart_min_framework (other encryption)
-
-# One shot invocation to encrypt unencrypted volumes
-service encrypt /system/bin/vdc --wait cryptfs enablecrypto inplace default
-    disabled
-    oneshot
-    # vold will set vold.decrypt to trigger_restart_framework (default
-    # encryption)
 
 service apaservice /system/bin/apaservice
     class main

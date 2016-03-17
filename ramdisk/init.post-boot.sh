@@ -63,8 +63,17 @@ if [ -x /system/xbin/busybox ]; then
 	set_environment
 fi
 
+# protect init from oom
+echo "-1000" > /proc/1/oom_score_adj;
+
+# set sysrq to 2 = enable control of console logging level
+echo "2" > /proc/sys/kernel/sysrq;
+
+# kill radio logcat to sdcard
+pkill -f "logcat -b radio -v time";
+
 # Remontar y Optimizar particiones con EXT4
-/res/ext/optimi_remount.sh
+/res/ext/optimi_remount.sh > /dev/null 2>&1
 
 sleep 0.9s
 
@@ -311,25 +320,25 @@ sleep 0.5s
 sleep 0.3s
 
 # Init KILL
-/res/ext/killing.sh
+/res/ext/killing.sh > /dev/null 2>&1
 
 # Init SQlite
-/res/ext/sqlite.sh
+/res/ext/sqlite.sh > /dev/null 2>&1
 
 # Init Zipalign
-/res/ext/zipalign.sh
+/res/ext/zipalign.sh > /dev/null 2>&1
 
 # Init Wifi Sleeper
-/res/ext/Wifi_sleeper.sh
+/res/ext/Wifi_sleeper.sh > /dev/null 2>&1
 
 # Init Kernel Sleepers
-/res/ext/Kernel_sleepers.sh
+/res/ext/Kernel_sleepers.sh > /dev/null 2>&1
 
 # Init Default tweaks buildprop
-/res/ext/buildprop.sh
+/res/ext/buildprop.sh > /dev/null 2>&1
 
 # Init Gps
-/res/ext/gps.sh
+/res/ext/gps.sh > /dev/null 2>&1
 
 # Kernel panic setup
 if [ -e /proc/sys/kernel/panic_on_oops ]; then 
@@ -345,6 +354,15 @@ fi
 # Tweaks (Javilonas)
 echo "5" > /proc/sys/vm/laptop_mode
 echo "8" > /proc/sys/vm/page-cluster
+echo "512 512000 256 2048" > /proc/sys/kernel/sem
+echo "268535656" > /proc/sys/kernel/shmmax
+echo "2048" > /proc/sys/kernel/msgmni
+echo "65836" > /proc/sys/kernel/msgmax
+echo "524488" > /proc/sys/fs/file-max
+echo "33200" > /proc/sys/fs/inotify/max_queued_events
+echo "584" > /proc/sys/fs/inotify/max_user_instances
+echo "10696" > /proc/sys/fs/inotify/max_user_watches
+echo "0" > /proc/sys/kernel/randomize_va_space
 
 # Tweaks Memory
 chown root system /sys/module/lowmemorykiller/parameters/adj
@@ -359,7 +377,7 @@ chmod -h 0666 /proc/sys/kernel/random/read_wakeup_threshold
 
 chown root system /proc/sys/kernel/random/write_wakeup_threshold
 chmod -h 0777 /proc/sys/kernel/random/write_wakeup_threshold
-echo "512" > /proc/sys/kernel/random/write_wakeup_threshold
+echo "384" > /proc/sys/kernel/random/write_wakeup_threshold
 chmod -h 0666 /proc/sys/kernel/random/write_wakeup_threshold
 
 chown root system /proc/sys/vm/vfs_cache_pressure
@@ -403,6 +421,29 @@ echo "90" > /proc/sys/vm/dirty_ratio
 chmod -h 0666 /proc/sys/vm/dirty_ratio
 
 sleep 0.5s
+
+# IPv6 privacy tweak
+echo "2" > /proc/sys/net/ipv6/conf/all/use_tempaddr
+
+# TCP tweaks
+echo "1" > /proc/sys/net/ipv4/tcp_low_latency
+echo "1" > /proc/sys/net/ipv4/tcp_tw_reuse
+echo "1" > /proc/sys/net/ipv4/tcp_tw_recycle
+echo "1" > /proc/sys/net/ipv4/route/flush
+echo "2" > /proc/sys/net/ipv4/tcp_syn_retries
+echo "2" > /proc/sys/net/ipv4/tcp_synack_retries
+echo "10" > /proc/sys/net/ipv4/tcp_fin_timeout
+echo "262144" > /proc/sys/net/core/rmem_default
+echo "262144" > /proc/sys/net/core/wmem_default
+echo "20480" > /proc/sys/net/core/optmem_max
+
+# reduce txqueuelen to 0 to switch from a packet queue to a byte one
+NET=`ls -d /sys/class/net/*`
+for i in $NET 
+do
+echo "0" > $i/tx_queue_len
+
+done
 
 # IO_tweak
 LOOP=`ls -d /sys/block/loop* 2>/dev/null`
@@ -454,10 +495,15 @@ chmod -h 0777 /sys/kernel/fast_charge/force_fast_charge
 echo "1" > /sys/kernel/fast_charge/force_fast_charge
 chmod -h 0666 /sys/kernel/fast_charge/force_fast_charge
 
+# Enable Dynamic FSync
+chmod 0777 /sys/kernel/dyn_fsync/Dyn_fsync_active
+echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+chmod 0664 /sys/kernel/dyn_fsync/Dyn_fsync_active
+
 # Enable KSM and optimice Tweaks
 chmod -h 0777 /sys/kernel/mm/ksm/*
 chown system.system /sys/kernel/mm/ksm/run
-#echo "1" > /sys/kernel/mm/ksm/run
+echo "1" > /sys/kernel/mm/ksm/run
 chown system.system /sys/kernel/mm/ksm/pages_to_scan
 echo "512" > /sys/kernel/mm/ksm/pages_to_scan
 chown system.system /sys/kernel/mm/ksm/sleep_millisecs
@@ -466,11 +512,11 @@ chmod -h 0666 /sys/kernel/mm/ksm/*
 
 # Tweaks for batery (intelli thermal)
 chmod -h 0777 /sys/module/intelli_thermal/parameters/limit_temp_degC
-echo "65" > /sys/module/intelli_thermal/parameters/limit_temp_degC
+echo "67" > /sys/module/intelli_thermal/parameters/limit_temp_degC
 chmod -h 0666 /sys/module/intelli_thermal/parameters/limit_temp_degC
 
 chmod -h 0777 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
-echo "77" > /sys/module/intelli_thermal/parameters/core_limit_temp_degC
+echo "79" > /sys/module/intelli_thermal/parameters/core_limit_temp_degC
 chmod -h 0666 /sys/module/intelli_thermal/parameters/core_limit_temp_degC
 
 chmod -h 0777 /sys/module/intelli_plug/parameters/cpu_nr_run_threshold
@@ -535,9 +581,9 @@ echo  Done ! >> /data/lonastest.log
 
 sleep 0.5s
 
-$busy fstrim -v /system >> /data/lonastest.log
-$busy fstrim -v /cache >> /data/lonastest.log
-$busy fstrim -v /data >> /data/lonastest.log
+$busy /sbin/fstrim -v /system >> /data/lonastest.log
+$busy /sbin/fstrim -v /cache >> /data/lonastest.log
+$busy /sbin/fstrim -v /data >> /data/lonastest.log
 
 sync
 

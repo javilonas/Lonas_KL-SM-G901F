@@ -16,6 +16,9 @@
 # limitations under the License.
 #
 
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
+
 su -c pm disable com.google.android.gms/.ads.settings.AdsSettingsActivity
 su -c pm disable com.google.android.gms/com.google.android.location.places.ui.aliaseditor.AliasEditorActivity
 su -c pm disable com.google.android.gms/com.google.android.location.places.ui.aliaseditor.AliasEditorMapActivity

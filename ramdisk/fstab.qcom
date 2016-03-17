@@ -11,10 +11,10 @@
 /dev/block/platform/msm_sdcc.1/by-name/persistent     /persistent  emmc    defaults                                     defaults
 
 # VOLD
-/devices/msm_sdcc.2/mmc_host/mmc1			auto 					vfat	default		voldmanaged=extSdCard:auto,noemulatedsd
-/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sda        auto                    vfat    default     voldmanaged=UsbDriveA:auto
-/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sdb        auto                    vfat    default     voldmanaged=UsbDriveB:auto
-/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sdc        auto                    vfat    default     voldmanaged=UsbDriveC:auto
-/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sdd        auto                    vfat    default     voldmanaged=UsbDriveD:auto
-/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sde        auto                    vfat    default     voldmanaged=UsbDriveE:auto
-/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sdf        auto                    vfat    default     voldmanaged=UsbDriveF:auto
+/devices/msm_sdcc.2/mmc_host/mmc1			auto 					auto	default		voldmanaged=extSdCard:auto,noemulatedsd
+/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sda        auto                    auto    default     voldmanaged=UsbDriveA:auto
+/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sdb        auto                    auto    default     voldmanaged=UsbDriveB:auto
+/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sdc        auto                    auto    default     voldmanaged=UsbDriveC:auto
+/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sdd        auto                    auto    default     voldmanaged=UsbDriveD:auto
+/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sde        auto                    auto    default     voldmanaged=UsbDriveE:auto
+/devices/f9200000.ssusb/f9200000.dwc3/xhci-hcd.0.auto/usb*sdf        auto                    auto    default     voldmanaged=UsbDriveF:auto
