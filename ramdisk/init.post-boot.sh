@@ -285,7 +285,7 @@ chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/min_freq
 
 #Set default values on boot
 echo "240000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
-echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
+echo "700000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
 
 # -10mv (Ahorro batería ON)
 echo "670 680 690 700 710 720 730 740 750 810 820 830 840 850 860 870 880 890 900 910 920 930 940 950 965 980 995 1010 1025 1030 1045 1060" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table

@@ -36,7 +36,7 @@
 		/* Bus Scale Settings */
 		qcom,bus-control;
 		qcom,msm-bus,name = "grp3d";
-		qcom,msm-bus,num-cases = <17>;
+		qcom,msm-bus,num-cases = <19>;
 		qcom,msm-bus,num-paths = <2>;
 		qcom,msm-bus,vectors-KBps =
 				<26 512 0 0>, <89 662 0 0>,
@@ -60,7 +60,10 @@
 				<26 512 0 12748800>, <89 662 0 8000000>,     // gpu=500 bus=796.8
 
 				<26 512 0 10598400>, <89 662 0 9600000>,     // gpu=600 bus=662.4
-				<26 512 0 12748800>, <89 662 0 9600000>;     // gpu=600 bus=796.8
+				<26 512 0 12748800>, <89 662 0 9600000>,     // gpu=600 bus=796.8
+
+				<26 512 0 12748800>, <89 662 0 11200000>,    // gpu=700 bus=796.8
+				<26 512 0 14400000>, <89 662 0 11200000>;    // gpu=700 bus=900
 
 		/* GDSC oxili regulators */
 		vddcx-supply = <&gdsc_oxili_cx>;
@@ -86,41 +89,48 @@
 
 			qcom,gpu-pwrlevel@0 {
 				reg = <0>;
+				qcom,gpu-freq = <700000000>;
+				qcom,bus-freq = <18>;
+				qcom,io-fraction = <23>;
+			};
+
+			qcom,gpu-pwrlevel@1 {
+				reg = <1>;
 				qcom,gpu-freq = <600000000>;
 				qcom,bus-freq = <16>;
 				qcom,io-fraction = <33>;
 			};
 
-			qcom,gpu-pwrlevel@1 {
-				reg = <1>;
+			qcom,gpu-pwrlevel@2 {
+				reg = <2>;
 				qcom,gpu-freq = <500000000>;
 				qcom,bus-freq = <13>;
 				qcom,io-fraction = <66>;
 			};
 
-			qcom,gpu-pwrlevel@2 {
-				reg = <2>;
+			qcom,gpu-pwrlevel@3 {
+				reg = <3>;
 				qcom,gpu-freq = <389000000>;
 				qcom,bus-freq = <10>;
 				qcom,io-fraction = <66>;
 			};
 
-			qcom,gpu-pwrlevel@3 {
-				reg = <3>;
+			qcom,gpu-pwrlevel@4 {
+				reg = <4>;
 				qcom,gpu-freq = <300000000>;
 				qcom,bus-freq = <7>;
 				qcom,io-fraction = <100>;
 			};
 
-			qcom,gpu-pwrlevel@4 {
-				reg = <4>;
+			qcom,gpu-pwrlevel@5 {
+				reg = <5>;
 				qcom,gpu-freq = <240000000>;
 				qcom,bus-freq = <3>;
 				qcom,io-fraction = <100>;
 			};
 
-			qcom,gpu-pwrlevel@5 {
-				reg = <5>;
+			qcom,gpu-pwrlevel@6 {
+				reg = <6>;
 				qcom,gpu-freq = <27000000>;
 				qcom,bus-freq = <0>;
 				qcom,io-fraction = <0>;
