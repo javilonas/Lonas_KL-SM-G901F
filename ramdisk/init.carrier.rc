@@ -28,20 +28,55 @@ on fs
     chmod 0755 /persdata 
     chown system system /persdata/absolute 
     chmod 0750 /persdata/absolute
-					
-					
-on post-fs-data
-#Private Mode
-    mkdir /data/privatemode 0770 system system
-    chown system system /data/privatemode
-    restorecon /data/privatemode
+
+# Support Preload install apks
+    mkdir /preload 0771 system system
 
 on boot
+# For setting tcp delayed ack
+    chown system system /sys/kernel/ipv4/tcp_delack_seg
+    chown system system /sys/kernel/ipv4/tcp_use_userconfig
+
+# Define TCP delayed ack settings for WiFi & LTE
+    setprop net.tcp.delack.default     1
+    setprop net.tcp.delack.wifi        8
+    setprop net.tcp.delack.lte         8
+    setprop net.tcp.usercfg.default    0
+    setprop net.tcp.usercfg.wifi       1
+    setprop net.tcp.usercfg.lte        1
+
 # Fingerprint
     mkdir /dev/validity 0770 system system
 
+# permission for MUIC(waterproof)
+    chown system radio /sys/class/sec/switch/uart_en
+
 # MSP FactoryApp
     mkdir /efs/FactoryApp 0775 system system
+
+# permissions for bluetooth.
+    setprop ro.bt.bdaddr_path "/efs/bluetooth/bt_addr"
+    chown bluetooth net_bt_stack ro.bt.bdaddr_path
+    chown radio net_bt_stack /efs/bluetooth/bt_addr
+    chmod 0640 /efs/bluetooth/bt_addr
+    chmod 0660 /sys/class/rfkill/rfkill0/state
+    chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/state
+    chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/type
+
+# DualWave
+    chown system system /sys/kernel/DualWave/sound/DUALWAVE_CONFIG
+
+# bluetooth LPM
+    chmod 0660 /proc/bluetooth/sleep/lpm
+    chmod 0220 /proc/bluetooth/sleep/btwrite
+    chown bluetooth net_bt_stack /proc/bluetooth/sleep/lpm
+    chown bluetooth net_bt_stack /proc/bluetooth/sleep/btwrite
+    chmod 0600 /dev/btlock
+    chown bluetooth bluetooth /dev/btlock
+
+# IPSec for VOLTE   
+    chown root system /dev/socket
+    chmod 0775 /dev/socket
 
 ###############################################################################
 # System LSI
@@ -56,25 +91,32 @@ on boot
     mkdir /data/nfc/param 0700 nfc nfc
 ##############################################################################
 
-# permissions for bluetooth.
-    setprop ro.bt.bdaddr_path "/efs/bluetooth/bt_addr"
-    chown bluetooth net_bt_stack ro.bt.bdaddr_path
-    chown radio net_bt_stack /efs/bluetooth/bt_addr
-    chmod 0640 /efs/bluetooth/bt_addr
-    chmod 0660 /sys/class/rfkill/rfkill0/state
-    chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/state
-    chown bluetooth net_bt_stack /sys/class/rfkill/rfkill0/type
-
-# bluetooth LPM
-    chmod 0660 /proc/bluetooth/sleep/lpm
-    chmod 0220 /proc/bluetooth/sleep/btwrite
-    chown bluetooth net_bt_stack /proc/bluetooth/sleep/lpm
-    chown bluetooth net_bt_stack /proc/bluetooth/sleep/btwrite
-    chmod 0600 /dev/btlock
-    chown bluetooth bluetooth /dev/btlock
-
 # SSWAP
     write /proc/sys/vm/swappiness 130
+
+#   Define TCP buffer sizes for various networks
+#   ReadMin, ReadInitial, ReadMax, WriteMin, WriteInitial, WriteMax,
+    setprop net.tcp.buffersize.default 4096,87380,110208,4096,16384,110208
+    setprop net.tcp.buffersize.lte     2097152,4194304,8388608,1048576,3145728,4194304
+    setprop net.tcp.buffersize.umts    4094,87380,110208,4096,16384,110208
+    setprop net.tcp.buffersize.hspa    4094,87380,1220608,4096,16384,1220608
+    setprop net.tcp.buffersize.hsupa   4094,87380,1220608,4096,16384,1220608
+    setprop net.tcp.buffersize.hsdpa   4094,87380,1220608,4096,16384,1220608
+    setprop net.tcp.buffersize.hspap   4094,87380,1220608,4096,16384,1220608
+    setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
+    setprop net.tcp.buffersize.gprs    4092,8760,11680,4096,8760,11680
+    setprop net.tcp.buffersize.evdo    4094,87380,262144,4096,16384,262144
+
+#   Assign TCP buffer thresholds to be ceiling value of technology maximums
+#   Increased technology maximums should be reflected here.
+    write /proc/sys/net/core/rmem_max  8388608
+    write /proc/sys/net/core/wmem_max  8388608
+
+# for ethernet
+service dhcpcd_eth0 /system/bin/dhcpcd -ABKL
+    class main
+    disabled
+    oneshot
 
 # TODO: replace it with device's DEXPREOPT_BOOT_JARS
 
@@ -88,6 +130,38 @@ service vcsFPService /system/bin/vcsFPService
     class late_start
     user system
     group system
+
+on post-fs-data
+
+#Private Mode
+    mkdir /data/privatemode 0770 system system
+    chown system system /data/privatemode
+    restorecon /data/privatemode\
+
+# SKT PM PlayReady
+    mkdir /data/playready 771 system skt
+    chown system skt /data/playready
+    chmod 0771 /data/playready
+
+# SKT DRM for hoppin
+    mkdir /data/data/.sktdrm 0775
+    chown system radio /data/data/.sktdrm
+    chmod 0775 /data/data/.sktdrm
+
+# for SKT TBASED
+    mkdir /data/tbased 0775 root wifi
+    chown root wifi /data/tbased
+    chmod 0775 /data/tbased
+
+    chown wifi wifi /system/lib/libiwlan_module.so
+    chmod 0644 /system/lib/libiwlan_module.so
+    chmod 0755 /system/bin/tbased
+
+# SKT TBASE
+service tbased /system/bin/tbased
+    class main
+    user root
+    oneshot
 
 # SSWAP
 service swapon /sbin/sswap -s
@@ -107,6 +181,46 @@ service iprenew_bt-pan /system/bin/dhcpcd -n
     class late_start
 	disabled
 	oneshot
+
+# IPSec for VOLTE   
+service ipsec-daemon /system/bin/IPSecService
+    class main
+    socket ipsec_socket stream 660 system system
+    user system
+    group system net_raw inet net_admin
+
+# umount service
+service umount_service /system/bin/umount /preload
+    disabled
+    oneshot    
+
+# Support Preload install apks
+on property:persist.sys.storage_preload=1
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/hidden /preload nosuid nodev ro barrier=1
+    setprop storage.preload.complete 1
+
+on property:persist.sys.storage_preload=0
+    start umount_service
+
+on property:ro.carrier=wifi-only
+    setprop ro.radio.noril yes
+    stop ril-daemon
+
+#Modem mount on Bootdevice
+#on fs_selinux
+# for modem one binary
+#    wait /dev/block/platform/msm_sdcc.1/by-name/modem
+#    mount vfat /dev/block/platform/msm_sdcc.1/by-name/modem /firmware-modem rw shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337,context=u:object_r:firmware:s0
+#    copy /system/etc/acdb.mbn /firmware-modem/image/acdb.mbn
+#    mount vfat /dev/block/mmcblk0p1 /firmware-modem ro remount
+
+#on early-fs
+# for modem one binary
+#    wait /dev/block/platform/msm_sdcc.1/by-name/modem
+#    mount vfat /dev/block/platform/msm_sdcc.1/by-name/modem /firmware-modem rw shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337,context=u:object_r:firmware:s0
+
+on post-fs
+    write /sys/block/mmcblk0/queue/read_ahead_kb 512
 
 on property:init.svc.bootanim=stopped
 # permission for Input Device(Touchkey).

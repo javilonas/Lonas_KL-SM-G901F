@@ -21,34 +21,15 @@ sleep 1
 PATH=/sbin:/system/sbin:/system/bin:/system/xbin
 export PATH
 
-# Launcher and Touch
-setprop ro.HOME_APP_ADJ -17
-
 # Battery and Wifi
 setprop wifi.supplicant_scan_interval 497
 setprop pm.sleep_mode 1
-setprop ro.mot.eri.losalert.delay 1000
-setprop profiler.force_disable_err_rpt 1
-setprop profiler.force_disable_ulog 1
 setprop ro.config.nocheckin 1
-
-# Fix App
-setprop ro.kernel.android.checkjni 0
-setprop ro.telephony.call_ring.delay 0
 
 # Sleep Mode
 setprop ro.ril.sensor.sleep.control 1
 setprop ro.wifi.hotspotUI 1
 setprop ro.tether.denied false
-
-# Fix Optimizer Ram
-setprop ro.config.dha_empty_max 36
-setprop ro.config.dha_cached_max 12
-setprop ro.config.dha_th_rate 2.3
-setprop ro.config.dha_lmk_scale 0.545
-setprop ro.config.sdha_apps_bg_max 70
-setprop ro.config.sdha_apps_bg_min 8
-setprop ro.config.oomminfree_high 7628,9768,11909,14515,16655,20469
 
 # off fast Dormancy
 setprop ro.semc.enable.fast_dormancy false

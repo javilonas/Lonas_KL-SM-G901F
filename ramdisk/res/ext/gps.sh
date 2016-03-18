@@ -1,6 +1,6 @@
 #!/system/bin/sh
 #
-# Copyright (c) 2015 Javier Sayago <admin@lonasdigital.com>
+# Copyright (c) 2016 Javier Sayago <admin@lonasdigital.com>
 # Contact: javilonas@esp-desarrolladores.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,8 @@
 PATH=/sbin:/system/sbin:/system/bin:/system/xbin
 export PATH
 
+# Google play services wakelock fix
+sleep 5
 su -c pm disable com.google.android.gms/.ads.settings.AdsSettingsActivity
 su -c pm disable com.google.android.gms/com.google.android.location.places.ui.aliaseditor.AliasEditorActivity
 su -c pm disable com.google.android.gms/com.google.android.location.places.ui.aliaseditor.AliasEditorMapActivity
@@ -107,7 +109,16 @@ su -c pm disable com.google.android.gms/com.google.android.libraries.social.medi
 su -c pm disable com.google.android.gms/.config.ConfigService
 su -c pm enable com.google.android.gms/.stats.PlatformStatsCollectorService
 su -c pm enable com.google.android.gms/.usagereporting.service.UsageReportingService
+su -c pm enable com.google.android.gms/.update.SystemUpdateActivity
 su -c pm enable com.google.android.gms/.update.SystemUpdateService
+su -c pm enable com.google.android.gms/.update.SystemUpdateService$ActiveReceiver
+su -c pm enable com.google.android.gms/.update.SystemUpdateService$Receiver
+su -c pm enable com.google.android.gms/.update.SystemUpdateService$SecretCodeReceiver
+su -c pm enable com.google.android.gsf/.update.SystemUpdateActivity
+su -c pm enable com.google.android.gsf/.update.SystemUpdatePanoActivity
+su -c pm enable com.google.android.gsf/.update.SystemUpdateService
+su -c pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver
+su -c pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver
 su -c pm enable com.google.android.gms/com.google.android.location.network.ConfirmAlertActivity
 su -c pm enable com.google.android.gms/com.google.android.location.network.LocationProviderChangeReceiver
 su -c pm enable com.google.android.gms/com.google.android.location.internal.server.GoogleLocationService

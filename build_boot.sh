@@ -43,7 +43,7 @@ export KERNEL_VERSION="Lonas-KL-1.5"
 export VERSION_KL="SM-G901F"
 export REVISION="RC"
 
-export KBUILD_BUILD_VERSION="3"
+export KBUILD_BUILD_VERSION="5"
 
 export ARCH=arm
 export SUBARCH=arm

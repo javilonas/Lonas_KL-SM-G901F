@@ -64,16 +64,13 @@ if [ -x /system/xbin/busybox ]; then
 fi
 
 # protect init from oom
-echo "-1000" > /proc/1/oom_score_adj;
+echo "-1000" > /proc/1/oom_score_adj
 
 # set sysrq to 2 = enable control of console logging level
-echo "2" > /proc/sys/kernel/sysrq;
+echo "2" > /proc/sys/kernel/sysrq
 
 # kill radio logcat to sdcard
-pkill -f "logcat -b radio -v time";
-
-# Remontar y Optimizar particiones con EXT4
-/res/ext/optimi_remount.sh > /dev/null 2>&1
+pkill -f "logcat -b radio -v time"
 
 sleep 0.9s
 
@@ -285,7 +282,7 @@ chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/min_freq
 
 #Set default values on boot
 echo "240000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
-echo "700000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
+echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
 
 # -10mv (Ahorro batería ON)
 echo "670 680 690 700 710 720 730 740 750 810 820 830 840 850 860 870 880 890 900 910 920 930 940 950 965 980 995 1010 1025 1030 1045 1060" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
@@ -422,29 +419,6 @@ chmod -h 0666 /proc/sys/vm/dirty_ratio
 
 sleep 0.5s
 
-# IPv6 privacy tweak
-echo "2" > /proc/sys/net/ipv6/conf/all/use_tempaddr
-
-# TCP tweaks
-echo "1" > /proc/sys/net/ipv4/tcp_low_latency
-echo "1" > /proc/sys/net/ipv4/tcp_tw_reuse
-echo "1" > /proc/sys/net/ipv4/tcp_tw_recycle
-echo "1" > /proc/sys/net/ipv4/route/flush
-echo "2" > /proc/sys/net/ipv4/tcp_syn_retries
-echo "2" > /proc/sys/net/ipv4/tcp_synack_retries
-echo "10" > /proc/sys/net/ipv4/tcp_fin_timeout
-echo "262144" > /proc/sys/net/core/rmem_default
-echo "262144" > /proc/sys/net/core/wmem_default
-echo "20480" > /proc/sys/net/core/optmem_max
-
-# reduce txqueuelen to 0 to switch from a packet queue to a byte one
-NET=`ls -d /sys/class/net/*`
-for i in $NET 
-do
-echo "0" > $i/tx_queue_len
-
-done
-
 # IO_tweak
 LOOP=`ls -d /sys/block/loop* 2>/dev/null`
 RAM=`ls -d /sys/block/ram* 2>/dev/null`
@@ -556,19 +530,6 @@ done &
 while ! pgrep android.process.acore ; do
 	sleep 2
 done
-
-# Google play services wakelock fix
-sleep 40
-su -c "pm enable com.google.android.gms/.update.SystemUpdateActivity"
-su -c "pm enable com.google.android.gms/.update.SystemUpdateService"
-su -c "pm enable com.google.android.gms/.update.SystemUpdateService$ActiveReceiver"
-su -c "pm enable com.google.android.gms/.update.SystemUpdateService$Receiver"
-su -c "pm enable com.google.android.gms/.update.SystemUpdateService$SecretCodeReceiver"
-su -c "pm enable com.google.android.gsf/.update.SystemUpdateActivity"
-su -c "pm enable com.google.android.gsf/.update.SystemUpdatePanoActivity"
-su -c "pm enable com.google.android.gsf/.update.SystemUpdateService"
-su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$Receiver"
-su -c "pm enable com.google.android.gsf/.update.SystemUpdateService$SecretCodeReceiver"
 
 # kernel custom test
 if [ -e /data/lonastest.log ]; then
