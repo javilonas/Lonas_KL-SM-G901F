@@ -337,9 +337,6 @@ sleep 0.3s
 # Init Gps
 /res/ext/gps.sh > /dev/null 2>&1
 
-# Init Liberar RAM
-/res/ext/libera_ram.sh > /dev/null 2>&1
-
 # Kernel panic setup
 if [ -e /proc/sys/kernel/panic_on_oops ]; then 
 	echo "0" > /proc/sys/kernel/panic_on_oops
@@ -570,6 +567,13 @@ sync
 
 # Force Disable Mpdecision
 stop mpdecision
+
+# Init Liberar RAM
+/res/ext/libera_ram.sh > /dev/null 2>&1
+
+sleep 0.2s
+
+sync
 
 mount -o remount,ro -t auto /
 mount -t rootfs -o remount,ro rootfs

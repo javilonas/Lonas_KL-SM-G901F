@@ -386,6 +386,9 @@ on property:dev.bootcomplete=1
     write /sys/module/rmnet_usb/parameters/dump_ctrl_msg 2
     write /sys/module/mhi/parameters/mhi_uci_dump 2
     write /sys/class/net/rmnet_mhi0/queues/rx-0/rps_cpus 1
+# SElinux
+    chmod 0664 /sys/fs/selinux/enforce
+    write /sys/fs/selinux/enforce 0
 
 on property:vold.decrypt=1
     mount tmpfs tmpfs /cpdump size=150M,mode=0700,uid=0,gid=0
