@@ -506,7 +506,7 @@ chmod -h 0666 /sys/module/intelli_plug/parameters/nr_run_hysteresis
 
 echo "883200" > /sys/module/intelli_plug/parameters/screen_off_max
 echo "0" > /sys/module/intelli_plug/parameters/touch_boost_active
-echo "2" > /sys/module/intelli_plug/parameters/nr_run_profile_sel
+echo "1" > /sys/module/intelli_plug/parameters/nr_run_profile_sel
 
 # Activate simple GPU alogarithm
 echo "4" > /sys/module/simple_gpu_algorithm/parameters/simple_laziness
