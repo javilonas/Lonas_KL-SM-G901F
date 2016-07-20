@@ -468,19 +468,19 @@ static struct clk_lookup kpss_clocks_8974[] = {
 	CLK_LOOKUP("",	krait2_pri_mux_clk.c,		""),
 	CLK_LOOKUP("",	krait3_pri_mux_clk.c,		""),
 	CLK_LOOKUP("",	l2_pri_mux_clk.c,		""),
-	CLK_LOOKUP("l2_clk",	l2_clk.c,     "0.qcom,msm-cpufreq"),
-	CLK_LOOKUP("cpu0_clk",	krait0_clk.c, "0.qcom,msm-cpufreq"),
-	CLK_LOOKUP("cpu1_clk",	krait1_clk.c, "0.qcom,msm-cpufreq"),
-	CLK_LOOKUP("cpu2_clk",	krait2_clk.c, "0.qcom,msm-cpufreq"),
-	CLK_LOOKUP("cpu3_clk",	krait3_clk.c, "0.qcom,msm-cpufreq"),
-	CLK_LOOKUP("l2_clk",	l2_clk.c,     "fe805664.qcom,pm"),
-	CLK_LOOKUP("cpu0_clk",	krait0_clk.c, "fe805664.qcom,pm"),
-	CLK_LOOKUP("cpu1_clk",	krait1_clk.c, "fe805664.qcom,pm"),
-	CLK_LOOKUP("cpu2_clk",	krait2_clk.c, "fe805664.qcom,pm"),
-	CLK_LOOKUP("cpu3_clk",	krait3_clk.c, "fe805664.qcom,pm"),
+	CLK_LOOKUP("l2_clk",	l2_clk.c,		"0.qcom,msm-cpufreq"),
+	CLK_LOOKUP("cpu0_clk",	krait0_clk.c,	"0.qcom,msm-cpufreq"),
+	CLK_LOOKUP("cpu1_clk",	krait1_clk.c,	"0.qcom,msm-cpufreq"),
+	CLK_LOOKUP("cpu2_clk",	krait2_clk.c,	"0.qcom,msm-cpufreq"),
+	CLK_LOOKUP("cpu3_clk",	krait3_clk.c,	"0.qcom,msm-cpufreq"),
+	CLK_LOOKUP("l2_clk",	l2_clk.c,		"fe805664.qcom,pm"),
+	CLK_LOOKUP("cpu0_clk",	krait0_clk.c,	"fe805664.qcom,pm"),
+	CLK_LOOKUP("cpu1_clk",	krait1_clk.c,	"fe805664.qcom,pm"),
+	CLK_LOOKUP("cpu2_clk",	krait2_clk.c,	"fe805664.qcom,pm"),
+	CLK_LOOKUP("cpu3_clk",	krait3_clk.c,	"fe805664.qcom,pm"),
 
 	CLK_LOOKUP("kpss_debug_mux", kpss_debug_pri_mux.c,
-		   "fc401880.qcom,cc-debug"),
+		"fc401880.qcom,cc-debug"),
 };
 
 static struct clk *cpu_clk[] = {
@@ -708,73 +708,73 @@ static void krait_update_uv(int *uv, int num, int boost_uv)
 
 #ifdef CONFIG_CPU_VOLTAGE_CONTROL
 
-#define CPU_VDD_MIN	 600
-#define CPU_VDD_MAX	1800
+#define CPU_VDD_MIN	 500
+#define CPU_VDD_MAX	1450
 
 extern bool is_used_by_scaling(unsigned int freq);
 
 ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf)
 {
-    int i, freq, len = 0;
-    /* use only master core 0 */
-    int num_levels = cpu_clk[0]->vdd_class->num_levels;
-    
-    /* sanity checks */
-    if (num_levels < 0)
-        return -EINVAL;
-    
-    if (!buf)
-        return -EINVAL;
-    
-    /* format UV_mv table */
-    for (i = 0; i < num_levels; i++) {
-        /* show only those used in scaling */
-        if (!is_used_by_scaling(freq = cpu_clk[0]->fmax[i] / 1000))
-            continue;
-        
-        len += sprintf(buf + len, "%dmhz: %u mV\n", freq / 1000,
-                       cpu_clk[0]->vdd_class->vdd_uv[i] / 1000);
-    }
-    return len;
+	int i, freq, len = 0;
+	/* use only master core 0 */
+	int num_levels = cpu_clk[0]->vdd_class->num_levels;
+
+	/* sanity checks */
+	if (num_levels < 0)
+		return -EINVAL;
+
+	if (!buf)
+		return -EINVAL;
+
+	/* format UV_mv table */
+	for (i = 1; i < num_levels; i++) {
+		/* show only those used in scaling */
+		if (!is_used_by_scaling(freq = cpu_clk[0]->fmax[i] / 1000))
+			continue;
+
+		len += sprintf(buf + len, "%dmhz: %u mV\n", freq / 1000,
+					cpu_clk[0]->vdd_class->vdd_uv[i] / 1000);
+	}
+	return len;
 }
 
 ssize_t store_UV_mV_table(struct cpufreq_policy *policy, char *buf,
-                          size_t count)
+						size_t count)
 {
-    int i, j;
-    int ret = 0;
-    unsigned int val;
-    char size_cur[8];
-    /* use only master core 0 */
-    int num_levels = cpu_clk[0]->vdd_class->num_levels;
-    
-    /* sanity checks */
-    if (num_levels < 0)
-        return -1;
-    
-    for (i = 0; i < num_levels; i++) {
-        if (!is_used_by_scaling(cpu_clk[0]->fmax[i] / 1000))
-            continue;
-        
-        ret = sscanf(buf, "%u", &val);
-        if (!ret)
-            return -EINVAL;
-        
-        /* bounds check */
-        val = min( max((unsigned int)val, (unsigned int)CPU_VDD_MIN),
-                  (unsigned int)CPU_VDD_MAX);
-        
-        /* apply it to all available cores */
-        for (j = 0; j < NR_CPUS; j++)
-            cpu_clk[j]->vdd_class->vdd_uv[i] = val * 1000;
-        
-        /* Non-standard sysfs interface: advance buf */
-        ret = sscanf(buf, "%s", size_cur);
-        buf += strlen(size_cur) + 1;
-    }
-    pr_warn("faux123: user voltage table modified!\n");
-    
-    return count;
+	int i, j;
+	int ret = 0;
+	unsigned int val;
+	char size_cur[8];
+	/* use only master core 0 */
+	int num_levels = cpu_clk[0]->vdd_class->num_levels;
+
+	/* sanity checks */
+	if (num_levels < 0)
+		return -1;
+
+	for (i = 1; i < num_levels; i++) {
+		if (!is_used_by_scaling(cpu_clk[0]->fmax[i] / 1000))
+			continue;
+
+		ret = sscanf(buf, "%u", &val);
+		if (!ret)
+			return -EINVAL;
+
+		/* bounds check */
+		val = min( max((unsigned int)val, (unsigned int)CPU_VDD_MIN),
+				(unsigned int)CPU_VDD_MAX);
+
+		/* apply it to all available cores */
+		for (j = 0; j < NR_CPUS; j++)
+			cpu_clk[j]->vdd_class->vdd_uv[i] = val * 1000;
+
+		/* Non-standard sysfs interface: advance buf */
+		ret = sscanf(buf, "%s", size_cur);
+		buf += strlen(size_cur) + 1;
+	}
+	pr_warn("faux123: user voltage table modified!\n");
+
+	return count;
 }
 #endif
 
@@ -862,12 +862,12 @@ static int clock_krait_8974_driver_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	ret = of_property_read_u32(dev->of_node, "qcom,hfpll-config-val",
-			     &config_val);
+				 &config_val);
 	if (!ret)
 		hdata.config_val = config_val;
 
 	ret = of_property_read_u32(dev->of_node, "qcom,hfpll-user-vco-mask",
-			     &vco_mask);
+				 &vco_mask);
 	if (!ret)
 		hdata.user_vco_mask = vco_mask;
 
@@ -900,7 +900,7 @@ static int clock_krait_8974_driver_probe(struct platform_device *pdev)
 	} else if (svs_pvs >= 0) {
 		/* Find the split freq for svs fmax */
 		ret = of_property_read_u32(dev->of_node, "qcom,svs-fmax",
-		     &svs_fmax);
+			 &svs_fmax);
 		if (ret) {
 			dev_err(dev, "Unable to find krait fmax for svs\n");
 			return ret;

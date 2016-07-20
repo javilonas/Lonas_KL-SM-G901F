@@ -1,6 +1,6 @@
 #!/system/bin/sh
 #
-# Copyright (c) 2015 Javier Sayago <admin@lonasdigital.com>
+# Copyright (c) 2016 Javier Sayago <admin@lonasdigital.com>
 # Contact: javilonas@esp-desarrolladores.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
 
 echo "............Closing APPS before init";
 

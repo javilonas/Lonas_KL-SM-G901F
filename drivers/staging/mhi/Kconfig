@@ -1,0 +1,7 @@
+comment "Qualcomm MHI module edited by samsung"
+
+config QCOM_MHI
+	tristate "Qualcomm MHI module for S5 Plus (SM-G901F)"
+	default n
+	help
+	  This is the support for samsungs mhi.ko module, taken from the opensource release G901FXXU1BOE2

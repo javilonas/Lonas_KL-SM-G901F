@@ -506,7 +506,7 @@ config PGTABLE_MAPPING
 config ZSWAP
 	bool "In-kernel swap page compression"
 	depends on FRONTSWAP && CRYPTO
-	select CRYPTO_LZO
+	select CRYPTO_LZ4
 	select ZSMALLOC_NEW
 	default n
 	help

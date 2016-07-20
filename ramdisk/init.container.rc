@@ -11,6 +11,11 @@ on init
 
     symlink /mnt/shell/knox-emulated /storage/knox-emulated
 
+    # SDP USER 0, SECURE FS
+    mkdir /mnt/shell/enc_emulated 0700 system system
+    mkdir /storage/enc_emulated 0711 system system
+    mkdir /mnt/shell/enc_media 0700 system system
+
     chown system system /dev/dek_evt
     chmod 600 /dev/dek_evt
 
@@ -35,6 +40,14 @@ on post-fs-data
 
     export KNOX_STORAGE /data/knox/ext_sdcard
 
+    # SDP USER 0, SECURE FS
+    mkdir /data/enc_user 0771 system system
+    mkdir /data/knox/secure_fs 0771 system system
+    mkdir /data/knox/secure_fs/enc_user 0771 system system
+    mkdir /data/knox/secure_fs/enc_media 0771 system system
+
+    export ENC_EMULATED_STORAGE_TARGET /storage/enc_emulated
+
     restorecon /data/knox
 
 on boot
@@ -48,11 +61,17 @@ service epmlogd /system/bin/epmlogd
 
 service sdp_cryptod /system/bin/sdp_cryptod
     class main
+    socket sdp stream 0660 system system
     user system
     group system
 
 # virtual sdcard daemon running as system (1000)
 service knox /system/bin/sdcard /data/knox/sdcard /mnt/shell/knox-emulated 1000 1000
+    class late_start
+    oneshot
+
+# virtual sdcard daemon running as system (1000)
+service secure_fs /system/bin/sdcard -r /data/knox/secure_fs/enc_media /mnt/shell/enc_media 1000 1000
     class late_start
     oneshot
 

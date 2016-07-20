@@ -178,5 +178,8 @@ obj-$(CONFIG_BATTERY_SAMSUNG)	+= battery/
 obj-$(CONFIG_SENSORS_FINGERPRINT)	+= fingerprint/
 
 obj-$(CONFIG_IRLED_GPIO)	+= irled/
+
 # SecFilter Driver
 obj-$(CONFIG_SEC_NET_FILTER)	+= secfilter/
+
+obj-$(CONFIG_GATOR)		+= gator/

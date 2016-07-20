@@ -13,7 +13,7 @@ import /init.post-modules.rc
 import /init.custom.rc
 import /init.carrier.rc
 #import /init.container.rc
-import /init.rilcarrier.rc
+import /init.rilcommon.rc
 
 on early-init
     # Set init and its forked children's oom_adj.
@@ -90,8 +90,9 @@ on init
 
     mkdir /.system
     mkdir /system
+    mkdir /su 0755 root root # create mount point for SuperSU
     mkdir /data 0771 system system
-    mkdir /cache 0771 system cache
+    mkdir /cache 0770 system cache
     mkdir /config 0500 root root
     mkdir /efs 0771 system radio
 
@@ -105,9 +106,12 @@ on init
 
     # Directory for putting things only root should see.
     mkdir /mnt/secure 0700 root root
-
+## Samsung ODE >>>
     # Create private mountpoint so we can MS_MOVE from staging
     mount tmpfs tmpfs /mnt/secure mode=0700,uid=0,gid=0
+## Samsung ODE <<<
+
+    symlink /dev/block/platform/msm_sdcc.1/by-name/persistent /dev/block/persistent
 
     # Directory for staging bindmounts
     mkdir /mnt/secure/staging 0700 root root
@@ -234,12 +238,15 @@ on late-init
     trigger boot
 
 on post-fs
+    mkdir /data/misc/vpnclientd 0770 system system
     # once everything is setup, no need to modify /
     mount rootfs rootfs / rw remount
     # mount shared so changes propagate into child namespaces
     mount rootfs rootfs / shared rec
+## Samsung ODE >>>
     mount tmpfs tmpfs /mnt/secure private rec
     mount tmpfs tmpfs /mnt/secure/asec shared rec
+## Samsung ODE <<<
 
     # We chown/chmod /cache again so because mount is run as root + defaults
     chown system cache /cache
@@ -286,7 +293,8 @@ on post-fs-data
     # We restorecon /data in case the userdata partition has been reset.
     restorecon /data
     restorecon /data/lost+found
-    restorecon_msc
+    restorecon_recursive /data/system/container
+    restorecon_recursive /data/media
 
     # Avoid predictable entropy pool. Carry over entropy from previous boot.
     copy /data/system/entropy.dat /dev/urandom
@@ -328,16 +336,20 @@ on post-fs-data
     mkdir /data/misc/vpn 0770 system vpn
     mkdir /data/misc/shared_relro 0771 shared_relro shared_relro
     mkdir /data/misc/systemkeys 0700 system system
-    mkdir /data/misc/jack 0770 jack system
     # give system access to wpa_supplicant.conf for backup and restore
     mkdir /data/misc/wifi 0770 wifi wifi
     mkdir /data/misc/wifi/sockets 0770 wifi wifi
     mkdir /data/misc/wifi/wpa_supplicant 0770 wifi wifi
     mkdir /data/misc/wifi_share_profile 0771 wifi system
+    mkdir /data/misc/wifi_sns_patch 0770 wifi system
     mkdir /data/misc/wifi_hostapd 0771 wifi system
     mkdir /data/misc/ethernet 0770 system system
     mkdir /data/misc/dhcp 0770 dhcp dhcp
     mkdir /data/misc/user 0771 root root
+    
+    # Professioanl Audio
+    mkdir /data/misc/jack 0770 jack system
+
     # give system access to wpa_supplicant.conf for backup and restore
     chmod 0660 /data/misc/wifi/wpa_supplicant.conf
     chown system wifi /data/misc/wifi/wpa_supplicant.conf
@@ -351,6 +363,8 @@ on post-fs-data
     chown system system /dev/icdr
     chmod 0644 /dev/icdr
     chown system system /dev/tzic
+    restorecon /dev/icd
+    restorecon /dev/icdr
 
     #SideSync
     chown system system /dev/android_ssusbcon
@@ -400,6 +414,13 @@ on post-fs-data
     # the following directory.
     mkdir /data/mediadrm 0770 mediadrm mediadrm
 
+    mkdir /data/adb 0700 root root
+
+    #create uibc dir
+    mkdir /dev/socket/uibc 0777 media system
+    chown media system /dev/socket/uibc
+    chmod 0775 /dev/socket/uibc
+
 # [ SEC_MM_DRM
     # OMA DB directory creation
     mkdir /data/system/databases 0775
@@ -424,7 +445,8 @@ on post-fs-data
     chown root root /system/lib/drm
     chmod 0775 /system/lib/drm
 
-    restorecon_recursive /efs
+    restorecon -R /efs
+    restorecon -R /carrier
     restorecon_recursive /data/misc/keystore
     restorecon_recursive /data/property
     restorecon_recursive /data/security
@@ -436,12 +458,14 @@ on post-fs-data
 #hatp permissions
     mkdir /data/misc/radio/hatp 0755 radio system
 
-#h2k permission
+# h2k
+    mkdir /efs/cpk 0771 radio system
    chmod 0644 /efs/redata.bin
-
+    chmod 0644 /efs/cpk/redata.bin
    chown radio radio /efs/h2k.dat
+    chown radio radio /efs/cpk/h2k.dat
    chmod 0644 /efs/h2k.dat
-
+    chmod 0644 /efs/cpk/h2k.dat
    chown system system /efs/drm/h2k
 
 # DRK permission
@@ -513,6 +537,7 @@ on boot
 
 # Mobicore
     mkdir /data/app/mcRegistry 0775 system system
+    mkdir /efs/TEE  0770 radio system
 
 # MUIC
     chown radio system /sys/class/sec/switch/usb_sel
@@ -556,14 +581,11 @@ on boot
 # parameters to match how it is managing things.
     write /proc/sys/vm/overcommit_memory 1
     write /proc/sys/vm/min_free_order_shift 4
+# Tweaks Memory
     chown root system /sys/module/lowmemorykiller/parameters/adj
-    chmod 0220 /sys/module/lowmemorykiller/parameters/adj
+    chmod -h 0666 /sys/module/lowmemorykiller/parameters/adj
     chown root system /sys/module/lowmemorykiller/parameters/minfree
-    chmod 0220 /sys/module/lowmemorykiller/parameters/minfree
-
-    # Tweak background writeout
-    write /proc/sys/vm/dirty_expire_centisecs 200
-    write /proc/sys/vm/dirty_background_ratio  5
+    chmod -h 0666 /sys/module/lowmemorykiller/parameters/minfree
 
     # Permissions for System Server and daemons.
     chown radio system /sys/android_power/state
@@ -770,6 +792,8 @@ on boot
 
 # Fingerprint_sensor
     chown system radio /sys/class/fingerprint/fingerprint/type_check
+    chown system radio /sys/class/fingerprint/fingerprint/name
+    chown system radio /sys/class/fingerprint/fingerprint/vendor
 # Accelerometer_sensor
     chown system radio /sys/class/sensors/accelerometer_sensor/raw_data
     chown system radio /sys/class/sensors/accelerometer_sensor/calibration
@@ -1061,6 +1085,33 @@ on boot
     chown radio system /sys/class/power_supply/battery/siop_level
     chown radio system /sys/class/power_supply/battery/test_charge_current
 
+# Permissions for Charging
+	chown system radio /sys/class/power_supply/battery/batt_reset_soc
+	chown system radio /sys/class/power_supply/battery/update
+	chown system radio /sys/class/power_supply/battery/factory_mode
+	chown system radio /sys/class/power_supply/battery/batt_slate_mode
+	chown sdcard_rw sdcard_rw /sys/class/power_supply/battery/call
+	chown sdcard_rw sdcard_rw /sys/class/power_supply/battery/video
+	chown sdcard_rw sdcard_rw /sys/class/power_supply/battery/music
+	chown sdcard_rw sdcard_rw /sys/class/power_supply/battery/browser
+	chown sdcard_rw sdcard_rw /sys/class/power_supply/battery/hotspot
+	chown sdcard_rw sdcard_rw /sys/class/power_supply/battery/camera
+	chown system radio /sys/class/power_supply/battery/talk_wcdma
+	chown system radio /sys/class/power_supply/battery/talk_gsm
+	chown system radio /sys/class/power_supply/battery/call
+	chown system radio /sys/class/power_supply/battery/data_call
+	chown system radio /sys/class/power_supply/battery/gps
+	chown system radio /sys/class/power_supply/battery/wifi
+	chown system radio /sys/class/power_supply/battery/lte
+	chown system radio /sys/class/power_supply/battery/wc_enable
+	chown system radio /sys/class/power_supply/battery/lcd
+	chown system radio /sys/class/power_supply/ps/status
+	chmod 0664 /sys/class/power_supply/ps/status
+	chown system radio /sys/class/power_supply/battery/batt_temp_table
+	chown system radio /sys/class/power_supply/battery/batt_high_current_usb
+	chown system radio /sys/class/power_supply/battery/hv_charger_set
+	chmod 0664 /sys/class/power_supply/battery/hv_charger_set
+
 # MOBEAM
     chown system radio /sys/class/sec/sec_barcode_emul/vendor
     chown system radio /sys/class/sec/sec_barcode_emul/name
@@ -1150,12 +1201,8 @@ on nonencrypted
     class_start main
     class_start late_start
 
-on property:vold.decrypt=trigger_default_encryption
-    start defaultcrypto
-
 on property:vold.decrypt=trigger_encryption
     start surfaceflinger
-    start encrypt
 
 on property:sys.init_log_level=*
     loglevel ${sys.init_log_level}
@@ -1209,9 +1256,15 @@ on property:vold.decrypt=trigger_post_fs_data
     trigger post-fs-data
 
 on property:vold.decrypt=trigger_restart_min_framework
+    write /sys/devices/system/cpu/cpu1/online 1
+    write /sys/devices/system/cpu/cpu2/online 1
+    write /sys/devices/system/cpu/cpu3/online 1
     class_start main
 
 on property:vold.decrypt=trigger_restart_framework
+    write /sys/devices/system/cpu/cpu1/online 1
+    write /sys/devices/system/cpu/cpu2/online 1
+    write /sys/devices/system/cpu/cpu3/online 1
     class_start main
     class_start late_start
 
@@ -1227,6 +1280,12 @@ on property:sys.powerctl=*
 # So proxy writes through init.
 on property:sys.sysctl.extra_free_kbytes=*
     write /proc/sys/vm/extra_free_kbytes ${sys.sysctl.extra_free_kbytes}
+
+# Activate Background Compaction
+on property:sys.sysctl.compact_memory=1
+    write /proc/sys/vm/compact_memory 1
+    setprop sys.sysctl.compact_memory=0
+
 # "tcp_default_init_rwnd" Is too long!
 on property:sys.sysctl.tcp_def_init_rwnd=*
     write /proc/sys/net/ipv4/tcp_default_init_rwnd ${sys.sysctl.tcp_def_init_rwnd}
@@ -1268,6 +1327,11 @@ on property:selinux.reload_policy=1
     chown system system /sys/fs/selinux/enforce
     chown -R system system /sys/fs/selinux/booleans
     chown system system /sys/fs/selinux/commit_pending_bools
+
+# SEC_SELINUX to support spota
+on property:selinux.sec.restorecon=1
+    restorecon_recursive /data/security/spota
+    restorecon_recursive /data/security/aasa
 
 service console /system/bin/sh
     class core
@@ -1368,13 +1432,13 @@ service vold /system/bin/vold
     class core
     socket vold stream 0660 root mount
     ioprio be 2
-    socket dir_enc_report stream 0660 root mount
-
-service epmd /system/bin/epmd
-    class main
+## Frigatebird
+    socket frigate stream 0660 system system
     socket epm stream 0660 system system
     socket ppm stream 0660 system system
-    ioprio be 2
+## Samsung ODE >>>
+    socket dir_enc_report stream 0660 root mount
+## Samsung ODE <<<
 
 service netd /system/bin/netd
     class main
@@ -1428,7 +1492,7 @@ service ril-daemon /system/bin/rild
     socket rild-debug stream 660 radio system
     socket rild-cas stream 660 casdrm mmb
     user root
-    group radio cache inet misc audio log qcom_diag system drmrpc
+    group radio cache inet misc audio log qcom_diag system drmrpc vpn system
 
 service surfaceflinger /system/bin/surfaceflinger
     class core
@@ -1453,20 +1517,6 @@ service media /system/bin/mediaserver
     group system audio camera inet net_bt net_bt_admin net_raw net_bw_acct drmrpc sdcard_r shell mediadrm qcom_diag lgt_gid media_rw radio
     ioprio rt 4
 
-# One shot invocation to deal with encrypted volume.
-service defaultcrypto /system/bin/vdc --wait cryptfs mountdefaultencrypted
-    disabled
-    oneshot
-    # vold will set vold.decrypt to trigger_restart_framework (default
-    # encryption) or trigger_restart_min_framework (other encryption)
-
-# One shot invocation to encrypt unencrypted volumes
-service encrypt /system/bin/vdc --wait cryptfs enablecrypto inplace default
-    disabled
-    oneshot
-    # vold will set vold.decrypt to trigger_restart_framework (default
-    # encryption)
-
 service apaservice /system/bin/apaservice
     class main
     user jack
@@ -1483,7 +1533,6 @@ service powersnd /system/bin/samsungpowersoundplay
     group system
     disabled
     oneshot
-
 service bootanim /system/bin/bootanimation
     class core
     user graphics
@@ -1531,7 +1580,7 @@ service charon /system/bin/charon
     class main
     socket charon stream 600 system system
     # charon will setuid to vpn after getting necessary resources.
-    group vpn net_admin inet
+    group vpn net_admin inet shell
     disabled
     oneshot
 
@@ -1643,6 +1692,16 @@ service createsystemfile /system/bin/createsystemfile
     disabled
     oneshot
 
+# otp
+service otp /system/bin/otp_server
+  user system
+  group system 
+  disabled
+
+on property:persist.security.tlc.otp=1  
+  start otp
+  setprop persist.security.tlc.otp 0
+
 # ccm
   service ccm /system/bin/tlc_server
   user system
@@ -1672,4 +1731,14 @@ service sysprof /system/bin/sysprof -f /data/local/tmp/.sysprofctrl -o /data/loc
     group root
     disabled
     oneshot
+
+service vpnclientd /system/bin/vpnclientd
+    socket vpnclientd seqpacket 0600 system system
+    user system
+    group system net_admin inet net_raw
+    disabled
+on property:service.vpnclientd.enable=1
+    start vpnclientd
+on property:service.vpnclientd.enable=0
+    stop vpnclientd
 

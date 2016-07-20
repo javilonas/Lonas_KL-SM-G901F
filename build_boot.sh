@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2015 Javier Sayago <admin@lonasdigital.com>
+# Copyright (c) 2016 Javier Sayago <admin@lonasdigital.com>
 # Contact: javilonas@esp-desarrolladores.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,8 +22,9 @@ echo "#################### Eliminando Restos ####################"
 
 # Rutas
 export ROOTFS_PATH="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/ramdisk"
+export WIFI_PATCH="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/drivers/staging/qcacld-2.0/firmware_bin"
 export RAMFS_TMP="/home/lonas/Kernel_Lonas/tmp/ramfs-source-sgs5plus"
-export TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.9/bin/arm-eabi-"
+export TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/linaro-arm-eabi-6.0-cortex-a15/bin/arm-eabi-"
 export TOOLBASE="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/buildtools"
 
 echo "#################### Preparando Entorno ####################"
@@ -38,11 +39,11 @@ if [ "${1}" != "" ];then
   export KERNELDIR=`readlink -f ${1}`
 fi
 
-export KERNEL_VERSION="Lonas-KL-1.4"
+export KERNEL_VERSION="Lonas-KL-1.5"
 export VERSION_KL="SM-G901F"
-export REVISION="RTM"
+export REVISION="RC"
 
-export KBUILD_BUILD_VERSION="1"
+export KBUILD_BUILD_VERSION="8"
 
 export ARCH=arm
 export SUBARCH=arm
@@ -96,6 +97,13 @@ make ARCH=arm CROSS_COMPILE=$TOOLCHAIN -j`grep 'processor' /proc/cpuinfo | wc -l
 make ARCH=arm CROSS_COMPILE=$TOOLCHAIN -j`grep 'processor' /proc/cpuinfo | wc -l` clean
 
 find -name '*.ko' -exec rm -rf {} \;
+rm $ROOTFS_PATH/res/etc/firmware/wlan/qca_cld/*.dat > /dev/null 2>&1
+rm $ROOTFS_PATH/res/etc/firmware/wlan/qca_cld/*.bin > /dev/null 2>&1
+rm $ROOTFS_PATH/res/etc/firmware/wlan/qca_cld/*_cfg.ini > /dev/null 2>&1
+
+rm $ROOTFS_PATH/res/etc/wifi/*.bin > /dev/null 2>&1
+rm $ROOTFS_PATH/res/etc/wifi/*_cfg.ini > /dev/null 2>&1
+
 rm -rf $KERNELDIR/arch/arm/boot/zImage > /dev/null 2>&1
 rm -rf $KERNELDIR/arch/arm/boot/zImage-dtb > /dev/null 2>&1
 rm -rf $KERNELDIR/arch/arm/boot/Image > /dev/null 2>&1
@@ -128,11 +136,11 @@ rm $KERNELDIR/output/*.img > /dev/null 2>&1
 
 echo "#################### Make defconfig ####################"
 
-make ARCH=arm CROSS_COMPILE=$TOOLCHAIN -C $(pwd) O=output apq8084_sec_defconfig VARIANT_DEFCONFIG=apq8084_sec_kccat6_eur_defconfig DEBUG_DEFCONFIG=apq8084_sec_userdebug_defconfig TIMA_DEFCONFIG=tima_defconfig DMVERITY_DEFCONFIG=dmverity_defconfig SELINUX_LOG_DEFCONFIG=selinux_log_defconfig SELINUX_DEFCONFIG=selinux_defconfig
+#make ARCH=arm CROSS_COMPILE=$TOOLCHAIN -C $(pwd) O=output apq8084_sec_defconfig VARIANT_DEFCONFIG=apq8084_sec_kccat6_eur_defconfig DEBUG_DEFCONFIG=apq8084_sec_userdebug_defconfig TIMA_DEFCONFIG=tima_defconfig DMVERITY_DEFCONFIG=dmverity_defconfig SELINUX_LOG_DEFCONFIG=selinux_log_defconfig SELINUX_DEFCONFIG=selinux_defconfig
 
-#make ARCH=arm CROSS_COMPILE=$TOOLCHAIN -C $(pwd) O=output lonas_defconfig
+make ARCH=arm CROSS_COMPILE=$TOOLCHAIN -C $(pwd) O=output lonas_defconfig VARIANT_DEFCONFIG= DEBUG_DEFCONFIG= TIMA_DEFCONFIG= DMVERITY_DEFCONFIG= SELINUX_LOG_DEFCONFIG= SELINUX_DEFCONFIG=  > /dev/null 2>&1
 
-cp $KERNELDIR/output/.config arch/arm/configs/lonas_defconfig 
+cp $KERNELDIR/output/.config arch/arm/configs/lonas_defconfig
 
 nice -n 10 make -j7 ARCH=arm CROSS_COMPILE=$TOOLCHAIN -C $(pwd) O=output lonas_defconfig KCONFIG_VARIANT= KCONFIG_DEBUG= KCONFIG_LOG_SELINUX= KCONFIG_SELINUX= KCONFIG_TIMA= KCONFIG_DMVERITY=
 
@@ -144,11 +152,30 @@ if [ ! -d $ROOTFS_PATH/system/lib/modules ]; then
 fi
 
 find . -name '*.ko' -exec cp -av {} $ROOTFS_PATH/system/lib/modules/ \;
-#unzip $KERNELDIR/proprietary-modules/proprietary-modules.zip -d $ROOTFS_PATH/system/lib/modules/
 chmod 644 $ROOTFS_PATH/system/lib/modules/*
 ${CROSS_COMPILE}strip --strip-unneeded $ROOTFS_PATH/system/lib/modules/*.ko
 
+sleep 0.5s
+sync
+
+#rm $ROOTFS_PATH/system/lib/modules/wlan.ko > /dev/null 2>&1
+#rm $ROOTFS_PATH/system/lib/modules/mhi.ko > /dev/null 2>&1
+#sleep 0.5s
+#sync
+
+#unzip $KERNELDIR/proprietary-modules/proprietary-modules.zip -d $ROOTFS_PATH/system/lib/modules/
+
+#sleep 0.5s
+#sync
+
 cp -f -R $ROOTFS_PATH/system/lib/modules/ $ROOTFS_PATH/res/
+
+cp -f -R $WIFI_PATCH/*.dat $ROOTFS_PATH/res/etc/firmware/wlan/qca_cld/
+cp -f -R $WIFI_PATCH/*.bin $ROOTFS_PATH/res/etc/firmware/wlan/qca_cld/
+cp -f -R $WIFI_PATCH/*.ini $ROOTFS_PATH/res/etc/firmware/wlan/qca_cld/
+
+cp -f -R $WIFI_PATCH/*.bin $ROOTFS_PATH/res/etc/wifi/
+cp -f -R $WIFI_PATCH/*.ini $ROOTFS_PATH/res/etc/wifi/
 
 cp -f output/arch/arm/boot/Image $(pwd)/arch/arm/boot/zImage
 

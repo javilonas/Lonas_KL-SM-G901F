@@ -52,7 +52,7 @@ static struct delayed_work intelli_plug_boost;
 static struct workqueue_struct *intelliplug_wq;
 static struct workqueue_struct *intelliplug_boost_wq;
 
-static unsigned int intelli_plug_active = 0;
+static unsigned int intelli_plug_active = 1;
 module_param(intelli_plug_active, uint, 0644);
 
 static unsigned int touch_boost_active = 1;
@@ -60,6 +60,9 @@ module_param(touch_boost_active, uint, 0644);
 
 static unsigned int nr_run_profile_sel = 0;
 module_param(nr_run_profile_sel, uint, 0644);
+
+static unsigned int min_online_cpus = 2;
+module_param(min_online_cpus, uint, 0664);
 
 //default to something sane rather than zero
 static unsigned int sampling_time = DEF_SAMPLING_MS;
@@ -81,7 +84,9 @@ module_param(screen_off_max, uint, 0644);
 
 #define CAPACITY_RESERVE	50
 
-#if defined(CONFIG_ARCH_MSM8960) || defined(CONFIG_ARCH_APQ8064) || \
+#if defined(CONFIG_ARCH_APQ8084) || defined(CONFIG_ARM64)
+#define THREAD_CAPACITY (430 - CAPACITY_RESERVE)
+#elif defined(CONFIG_ARCH_MSM8960) || defined(CONFIG_ARCH_APQ8064) || \
 defined(CONFIG_ARCH_MSM8974)
 #define THREAD_CAPACITY	(339 - CAPACITY_RESERVE)
 #elif defined(CONFIG_ARCH_MSM8226) || defined (CONFIG_ARCH_MSM8926) || \
@@ -119,12 +124,12 @@ static unsigned int nr_run_thresholds_conservative[] = {
 };
 
 static unsigned int nr_run_thresholds_eco[] = {
-        (THREAD_CAPACITY * 380 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 380 * MULT_FACTOR) / DIV_FACTOR,
 	UINT_MAX
 };
 
 static unsigned int nr_run_thresholds_eco_extreme[] = {
-        (THREAD_CAPACITY * 750 * MULT_FACTOR) / DIV_FACTOR,
+	(THREAD_CAPACITY * 750 * MULT_FACTOR) / DIV_FACTOR,
 	UINT_MAX
 };
 
@@ -264,7 +269,12 @@ static void __ref intelli_plug_work_fn(struct work_struct *work)
 #ifdef DEBUG_INTELLI_PLUG
 		pr_info("nr_run_stat: %u\n", nr_run_stat);
 #endif
-		cpu_count = nr_run_stat;
+
+		/* Mod (num= 1,2,3 or 4): echo 'num' > /sys/module/intelli_plug/parameters/min_online_cpus */
+		if (unlikely(min_online_cpus > 4))
+			min_online_cpus = 4;
+
+		cpu_count = nr_run_stat < min_online_cpus ? min_online_cpus : nr_run_stat;
 		nr_cpus = num_online_cpus();
 
 		if (!suspended) {
@@ -412,21 +422,21 @@ static void wakeup_boost(void)
 
 void __ref intelli_plug_perf_boost(bool on)
 {
-    unsigned int cpu;
-    
-    if (intelli_plug_active) {
-        flush_workqueue(intelliplug_wq);
-        if (on) {
-            for_each_possible_cpu(cpu) {
-                if (!cpu_online(cpu))
-                cpu_up(cpu);
-            }
-        } else {
-            queue_delayed_work_on(0, intelliplug_wq,
-            	&intelli_plug_work,
-            	msecs_to_jiffies(sampling_time));
-        }
-    }
+	unsigned int cpu;
+
+	if (intelli_plug_active) {
+		flush_workqueue(intelliplug_wq);
+		if (on) {
+			for_each_possible_cpu(cpu) {
+				if (!cpu_online(cpu))
+				cpu_up(cpu);
+			}
+		} else {
+			queue_delayed_work_on(0, intelliplug_wq,
+				&intelli_plug_work,
+				msecs_to_jiffies(sampling_time));
+		}
+	}
 }
 
 #ifdef CONFIG_POWERSUSPEND
@@ -468,9 +478,9 @@ static struct power_suspend intelli_plug_power_suspend_driver = {
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static struct early_suspend intelli_plug_early_suspend_driver = {
-        .level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 10,
-        .suspend = intelli_plug_suspend,
-        .resume = intelli_plug_resume,
+		.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 10,
+		.suspend = intelli_plug_suspend,
+		.resume = intelli_plug_resume,
 };
 #endif	/* CONFIG_HAS_EARLYSUSPEND */
 
@@ -527,25 +537,25 @@ static const struct input_device_id intelli_plug_ids[] = {
 			 INPUT_DEVICE_ID_MATCH_ABSBIT,
 		.evbit = { BIT_MASK(EV_ABS) },
 		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
-			    BIT_MASK(ABS_MT_POSITION_X) |
-			    BIT_MASK(ABS_MT_POSITION_Y) },
+				BIT_MASK(ABS_MT_POSITION_X) |
+				BIT_MASK(ABS_MT_POSITION_Y) },
 	}, /* multi-touch touchscreen */
 	{
 		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
 			 INPUT_DEVICE_ID_MATCH_ABSBIT,
 		.keybit = { [BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) },
 		.absbit = { [BIT_WORD(ABS_X)] =
-			    BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
+				BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
 	}, /* touchpad */
 	{ },
 };
 
 static struct input_handler intelli_plug_input_handler = {
-	.event          = intelli_plug_input_event,
-	.connect        = intelli_plug_input_connect,
-	.disconnect     = intelli_plug_input_disconnect,
-	.name           = "intelliplug_handler",
-	.id_table       = intelli_plug_ids,
+	.event = intelli_plug_input_event,
+	.connect = intelli_plug_input_connect,
+	.disconnect = intelli_plug_input_disconnect,
+	.name  = "intelliplug_handler",
+	.id_table = intelli_plug_ids,
 };
 
 int __init intelli_plug_init(void)

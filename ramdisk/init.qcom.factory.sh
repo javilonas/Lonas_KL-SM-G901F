@@ -133,14 +133,6 @@
 # parameters to match how it is managing things.
     echo 1 > /proc/sys/vm/overcommit_memory
     echo 4 > /proc/sys/vm/min_free_order_shift
-    chown -h root.system /sys/module/lowmemorykiller/parameters/adj
-    chmod -h 0664 /sys/module/lowmemorykiller/parameters/adj
-    chown -h root.system /sys/module/lowmemorykiller/parameters/minfree
-    chmod -h 0664 /sys/module/lowmemorykiller/parameters/minfree
-
-    # Tweak background writeout
-    echo 200 > /proc/sys/vm/dirty_expire_centisecs
-    echo 5 > /proc/sys/vm/dirty_background_ratio
 
     # Permissions for System Server and daemons.
     chown -h radio.system /sys/android_power/state

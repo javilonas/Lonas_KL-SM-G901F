@@ -17,6 +17,10 @@
 #
 
 sleep 1
+
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
+
 for i in \
 `find /data -iname "*.db"`; 
 do \

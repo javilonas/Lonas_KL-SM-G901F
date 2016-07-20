@@ -11,6 +11,44 @@
  * the Free Software Foundation; version 2 of the License.
  *
  */
+/* Extended sysfs interface to allow for full control of LED operations
+ *
+ * Extension Author: Jean-Pierre Rasquin <yank555.lu@gmail.com>
+ * Further extended by andip71, 23.01.2014
+ *
+ * SysFS interface :
+ * -----------------
+ *
+ * /sys/class/sec/led/led_fade (rw)
+ *
+ *   0 : blink (Samsung style)
+ *   1 : fade (CyanogenMod style)
+ *
+ * /sys/class/sec/led/led_intensity (rw)
+ *
+ *        0 : stock CM behaviour
+ *    1- 39 : darker than Samsung stock
+ *       40 : stock Samsung behaviour
+ *   41-255 : brighter than Samsung stock
+ *
+ *    NB: Low power mode respected, applied brightness is divided by 0x8, except in CM mode, where it's never applied
+ *
+ * /sys/class/sec/led/led_speed (rw)
+ *
+ *   0 : continuous light
+ *   1 : normal rate
+ *   2 - 60: faster rate
+ *
+ * /sys/class/sec/led/led_slope (rw)
+ *
+ *   takes 4 parameters, each between 0 and 5 (steps of 4ms) for :
+ *
+ *      slope up operation 1
+ *      slope up operation 2
+ *      slope down operation 1
+ *      slope down operation 2
+ */
+
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -80,6 +118,8 @@
 
 #define	MAX_NUM_LEDS	3
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 u8 LED_DYNAMIC_CURRENT = 0x28;
 u8 LED_LOWPOWER_MODE = 0x0;
 
@@ -89,6 +129,8 @@ u32 LED_B_CURRENT = 0x28;
 
 u32 led_default_cur = 0x28;
 u32 led_lowpower_cur = 0x05;
+
+unsigned long disabled_samsung_pattern = 0;
 
 static struct an30259_led_conf led_conf[] = {
 	{
@@ -148,9 +190,20 @@ struct i2c_client *b_client;
 
 #ifdef SEC_LED_SPECIFIC
 struct device *led_dev;
+int led_enable_fade;
+u8 led_intensity;
+int led_speed;
+int led_slope_up_1;
+int led_slope_up_2;
+int led_slope_down_1;
+int led_slope_down_2;
 /*path : /sys/class/sec/led/led_pattern*/
 /*path : /sys/class/sec/led/led_blink*/
-/*path : /sys/class/sec/led/led_brightness*/
+/*path : /sys/class/sec/led/led_fade*/
+/*path : /sys/class/sec/led/led_intensity*/
+/*path : /sys/class/sec/led/led_speed*/
+/*path : /sys/class/sec/led/led_slope*/
+/*path : /sys/class/sec/led/disable_samsung_pattern*/
 /*path : /sys/class/leds/led_r/brightness*/
 /*path : /sys/class/leds/led_g/brightness*/
 /*path : /sys/class/leds/led_b/brightness*/
@@ -254,6 +307,7 @@ static void leds_set_slope_mode(struct i2c_client *client,
 				u8 slptt1, u8 slptt2,
 				u8 dt1, u8 dt2, u8 dt3, u8 dt4)
 {
+
 	struct an30259a_data *data = i2c_get_clientdata(client);
 
 	data->shadow_reg[AN30259A_REG_LED1CNT1 + led * 4] =
@@ -277,7 +331,7 @@ static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
 		data->shadow_reg[AN30259A_REG_LED1CNT2 + led * 4] &=
 							~AN30259A_MASK_DELAY;
 	}
-	if (slopemode)
+	if ((slopemode) && (led_speed != 0))
 		data->shadow_reg[AN30259A_REG_LEDON] |= LED_SLOPE_MODE << led;
 	else
 		data->shadow_reg[AN30259A_REG_LEDON] &=
@@ -323,12 +377,20 @@ static void an30259a_reset_register_work(struct work_struct *work)
 static void an30259a_start_led_pattern(int mode)
 {
 	int retval;
+	u8 r_brightness;          /* Yank555.lu : Control LED intensity (normal, bright) */
+	u8 g_brightness;
+	u8 b_brightness;
 	struct i2c_client *client;
 	struct work_struct *reset = 0;
 	client = b_client;
 
 	if (mode > POWERING)
 		return;
+
+	if(disabled_samsung_pattern) {
+		return;
+	}
+
 	/* Set all LEDs Off */
 	an30259a_reset_register_work(reset);
 	if (mode == LED_OFF)
@@ -340,43 +402,66 @@ static void an30259a_start_led_pattern(int mode)
 	else
 		LED_DYNAMIC_CURRENT = (u8)led_default_cur;
 
+	/* Yank555.lu : Control LED intensity (normal, bright) */
+	if (led_intensity == 0) {
+		r_brightness = LED_R_CURRENT; /* CM stock behaviour */
+		g_brightness = LED_G_CURRENT;
+		b_brightness = LED_B_CURRENT;
+	} else {
+		r_brightness = MIN(led_intensity, LED_MAX_CURRENT);
+		g_brightness = MIN(led_intensity, LED_MAX_CURRENT);
+		b_brightness = MIN(led_intensity, LED_MAX_CURRENT);
+	}
+
 	switch (mode) {
 	/* leds_set_slope_mode(client, LED_SEL, DELAY,  MAX, MID, MIN,
 		SLPTT1, SLPTT2, DT1, DT2, DT3, DT4) */
 	case CHARGING:
 		pr_info("LED Battery Charging Pattern on\n");
-		leds_on(LED_R, true, false,
-					LED_DYNAMIC_CURRENT);
+		leds_on(LED_R, true, false, r_brightness);
 		break;
 
 	case CHARGING_ERR:
 		pr_info("LED Battery Charging error Pattern on\n");
-		leds_on(LED_R, true, true,
-					LED_DYNAMIC_CURRENT);
-		leds_set_slope_mode(client, LED_R,
-				1, 15, 15, 0, 1, 1, 0, 0, 0, 0);
+		leds_on(LED_R, true, true, r_brightness);
+		/* Yank555.lu : Handle fading / blinking */
+		if (led_enable_fade == 1) {
+			leds_set_slope_mode(client, LED_R,
+					1, (15 / led_speed),  (7 / led_speed), 0, 1, 1, led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
+		} else {
+			leds_set_slope_mode(client, LED_R,
+					1, (15 / led_speed), (15 / led_speed), 0, 1, 1, 0, 0, 0, 0);
+		}
 		break;
 
 	case MISSED_NOTI:
 		pr_info("LED Missed Notifications Pattern on\n");
-		leds_on(LED_B, true, true,
-					LED_DYNAMIC_CURRENT);
-		leds_set_slope_mode(client, LED_B,
-					10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
+		leds_on(LED_B, true, true, b_brightness);
+		/* Yank555.lu : Handle fading / blinking */
+		if (led_enable_fade == 1) {
+			leds_set_slope_mode(client, LED_B,
+						10, (15 / led_speed),  (7 / led_speed), 0, 1, (10 / led_speed), led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
+		} else {
+			leds_set_slope_mode(client, LED_B,
+						10, (15 / led_speed), (15 / led_speed), 0, 1, (10 / led_speed), 0, 0, 0, 0);
+		}
 		break;
-
 	case LOW_BATTERY:
 		pr_info("LED Low Battery Pattern on\n");
-		leds_on(LED_R, true, true,
-					LED_DYNAMIC_CURRENT);
-		leds_set_slope_mode(client, LED_R,
-					10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
+		leds_on(LED_R, true, true, r_brightness);
+		/* Yank555.lu : Handle fading / blinking */
+		if (led_enable_fade == 1) {
+			leds_set_slope_mode(client, LED_R,
+						10, (15 / led_speed),  (7 / led_speed), 0, 1, (10 / led_speed), led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
+		} else {
+			leds_set_slope_mode(client, LED_R,
+						10, (15 / led_speed), (15 / led_speed), 0, 1, (10 / led_speed), 0, 0, 0, 0);
+		}
 		break;
 
 	case FULLY_CHARGED:
 		pr_info("LED full Charged battery Pattern on\n");
-		leds_on(LED_G, true, false,
-					LED_DYNAMIC_CURRENT);
+		leds_on(LED_G, true, false, g_brightness);
 		break;
 
 	case POWERING:
@@ -418,8 +503,11 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	else if (led == LED_B)
 		LED_DYNAMIC_CURRENT = LED_B_CURRENT;
 
-	/* In user case, LED current is restricted */
-	brightness = (brightness * LED_DYNAMIC_CURRENT) / LED_MAX_CURRENT;
+	/* Yank555.lu : Control LED intensity (CM, Samsung, override) */
+	if (led_intensity == 40) /* Samsung stock behaviour */
+		brightness = (brightness * LED_DYNAMIC_CURRENT) / LED_MAX_CURRENT;
+	else if (led_intensity != 0) /* CM stock behaviour */
+		brightness = (brightness * led_intensity) / LED_MAX_CURRENT; /* override, darker or brighter */
 
 	if (delay_on_time > SLPTT_MAX_VALUE)
 		delay_on_time = SLPTT_MAX_VALUE;
@@ -435,12 +523,22 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	} else
 		leds_on(led, true, true, brightness);
 
-	leds_set_slope_mode(client, led, 0, 15, 15, 0,
-				(delay_on_time + AN30259A_TIME_UNIT - 1) /
-				AN30259A_TIME_UNIT,
-				(delay_off_time + AN30259A_TIME_UNIT - 1) /
-				AN30259A_TIME_UNIT,
-				0, 0, 0, 0);
+	/* Yank555.lu : Handle fading / blinking */
+	if (led_enable_fade == 1) {
+		leds_set_slope_mode(client, led, 0, (15 / led_speed), (7 / led_speed), 0,
+					((delay_on_time / led_speed) + AN30259A_TIME_UNIT - 1) /
+					AN30259A_TIME_UNIT,
+					((delay_off_time / led_speed) + AN30259A_TIME_UNIT - 1) /
+					AN30259A_TIME_UNIT,
+					led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
+	} else {
+		leds_set_slope_mode(client, led, 0, (15 / led_speed), (15 / led_speed), 0,
+					((delay_on_time / led_speed) + AN30259A_TIME_UNIT - 1) /
+					AN30259A_TIME_UNIT,
+					((delay_off_time / led_speed) + AN30259A_TIME_UNIT - 1) /
+					AN30259A_TIME_UNIT,
+					0, 0, 0, 0);
+	}
 }
 
 static ssize_t store_an30259a_led_lowpower(struct device *dev,
@@ -519,6 +617,7 @@ static ssize_t store_an30259a_led_blink(struct device *dev,
 	u8 led_r_brightness = 0;
 	u8 led_g_brightness = 0;
 	u8 led_b_brightness = 0;
+	struct work_struct *reset = 0;
 
 	retval = sscanf(buf, "0x%x %d %d", &led_brightness,
 				&delay_on_time, &delay_off_time);
@@ -528,7 +627,7 @@ static ssize_t store_an30259a_led_blink(struct device *dev,
 		return count;
 	}
 	/*Reset an30259a*/
-	an30259a_start_led_pattern(LED_OFF);
+	an30259a_reset_register_work(reset);
 
 	/*Set LED blink mode*/
 	led_r_brightness = ((u32)led_brightness & LED_R_MASK)
@@ -552,6 +651,110 @@ static ssize_t store_an30259a_led_blink(struct device *dev,
 	return count;
 }
 
+static ssize_t show_an30259a_led_fade(struct device *dev,
+                    struct device_attribute *attr, char *buf)
+{
+	switch(led_enable_fade) {
+		case 0:		return sprintf(buf, "%d - LED fading is disabled\n", led_enable_fade);
+		case 1:		return sprintf(buf, "%d - LED fading is enabled\n", led_enable_fade);
+		default:	return sprintf(buf, "%d - LED fading is in undefined status\n", led_enable_fade);
+	}
+}
+
+static ssize_t store_an30259a_led_fade(struct device *dev,
+					struct device_attribute *devattr,
+					const char *buf, size_t count)
+{
+	int enabled = -1; /* default to not set a new value */
+
+	sscanf(buf, "%d", &enabled);
+
+	switch(enabled) { /* Accept only if 0 or 1 */
+		case 0:
+		case 1:		led_enable_fade = enabled;
+		default:	return count;
+	}
+}
+
+static ssize_t show_an30259a_led_intensity(struct device *dev,
+                    struct device_attribute *attr, char *buf)
+{
+	switch(led_intensity) {
+		case  0:	return sprintf(buf, "%d - CM stock LED intensity\n", led_intensity);
+		case 40:	return sprintf(buf, "%d - Samsung stock LED intensity\n", led_intensity);
+		default:	if (led_intensity < 40) 
+					return sprintf(buf, "%d - LED intesity darker by %d steps\n", led_intensity, 40-led_intensity);
+				else
+					return sprintf(buf, "%d - LED intesity brighter by %d steps\n", led_intensity, led_intensity-40);
+	}
+}
+
+static ssize_t store_an30259a_led_intensity(struct device *dev,
+					struct device_attribute *devattr,
+					const char *buf, size_t count)
+{
+	int new_intensity = -1; /* default to not set a new value */
+
+	sscanf(buf, "%d", &new_intensity);
+
+	/* Only values between 0 and 255 are accepted */
+	if (new_intensity >= 0 && new_intensity <= 255)
+
+		led_intensity = (u8)new_intensity;
+
+	return count;
+
+}
+
+static ssize_t show_an30259a_led_speed(struct device *dev,
+                    struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d - LED blinking/fading speed\n", led_speed);
+}
+
+static ssize_t store_an30259a_led_speed(struct device *dev,
+					struct device_attribute *devattr,
+					const char *buf, size_t count)
+{
+	int new_led_speed = -1; /* default to not set a new value */
+
+	sscanf(buf, "%d", &new_led_speed);
+
+	// only accept if between 0 and 15
+	if ((new_led_speed >= 0) && (new_led_speed <= 15))
+		led_speed = new_led_speed;
+		
+	return count;
+}
+
+static ssize_t show_an30259a_led_slope(struct device *dev,
+                    struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "Slope up : (%d,%d) - Slope down (%d,%d)\n", led_slope_up_1, led_slope_up_2, led_slope_down_1, led_slope_down_2);
+}
+
+static ssize_t store_an30259a_led_slope(struct device *dev,
+					struct device_attribute *devattr,
+					const char *buf, size_t count)
+{
+	int new_led_slope_up_1;
+	int new_led_slope_up_2;
+	int new_led_slope_down_1;
+	int new_led_slope_down_2;
+	int retval;
+
+	retval = sscanf(buf, "%d %d %d %d", &new_led_slope_up_1, &new_led_slope_up_2, &new_led_slope_down_1, &new_led_slope_down_2);
+
+	if (retval) {
+		/* allow only values between 0 and 5 (steps of 4ms) */
+		led_slope_up_1   = min(max(new_led_slope_up_1  , 0), 5);
+		led_slope_up_2   = min(max(new_led_slope_up_2  , 0), 5);
+		led_slope_down_1 = min(max(new_led_slope_down_1, 0), 5);
+		led_slope_down_2 = min(max(new_led_slope_down_2, 0), 5);
+	}
+
+	return count;
+}
 
 static ssize_t store_led_r(struct device *dev,
 	struct device_attribute *devattr, const char *buf, size_t count)
@@ -717,10 +920,28 @@ static ssize_t led_blink_store(struct device *dev,
 	return len;
 }
 
+static ssize_t disable_samsung_pattern_on_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, 10, "%lu\n", disabled_samsung_pattern);
+}
+
+static ssize_t disable_samsung_pattern_on_store(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t len)
+{
+
+	if (kstrtoul(buf, 0, &disabled_samsung_pattern))
+		return -EINVAL;
+
+	return 1;
+}
+
 /* permission for sysfs node */
 static DEVICE_ATTR(delay_on, 0644, led_delay_on_show, led_delay_on_store);
 static DEVICE_ATTR(delay_off, 0644, led_delay_off_show, led_delay_off_store);
 static DEVICE_ATTR(blink, 0644, NULL, led_blink_store);
+static DEVICE_ATTR(disable_samsung_pattern, 0644, disable_samsung_pattern_on_show, disable_samsung_pattern_on_store);
 
 #ifdef SEC_LED_SPECIFIC
 /* below nodes is SAMSUNG specific nodes */
@@ -733,6 +954,14 @@ static DEVICE_ATTR(led_pattern, 0664, NULL, \
 					store_an30259a_led_pattern);
 static DEVICE_ATTR(led_blink, 0664, NULL, \
 					store_an30259a_led_blink);
+static DEVICE_ATTR(led_fade, 0664, show_an30259a_led_fade, \
+					store_an30259a_led_fade);
+static DEVICE_ATTR(led_intensity, 0664, show_an30259a_led_intensity, \
+					store_an30259a_led_intensity);
+static DEVICE_ATTR(led_speed, 0664, show_an30259a_led_speed, \
+					store_an30259a_led_speed);
+static DEVICE_ATTR(led_slope, 0664, show_an30259a_led_slope, \
+					store_an30259a_led_slope);
 static DEVICE_ATTR(led_br_lev, 0664, NULL, \
 					store_an30259a_led_br_lev);
 static DEVICE_ATTR(led_lowpower, 0664, NULL, \
@@ -758,8 +987,13 @@ static struct attribute *sec_led_attributes[] = {
 	&dev_attr_led_b.attr,
 	&dev_attr_led_pattern.attr,
 	&dev_attr_led_blink.attr,
+	&dev_attr_led_fade.attr,
+	&dev_attr_led_intensity.attr,
+	&dev_attr_led_speed.attr,
+	&dev_attr_led_slope.attr,
 	&dev_attr_led_br_lev.attr,
 	&dev_attr_led_lowpower.attr,
+	&dev_attr_disable_samsung_pattern.attr,
 	NULL,
 };
 
@@ -897,6 +1131,15 @@ static int an30259a_probe(struct i2c_client *client,
 	}
 
 #ifdef SEC_LED_SPECIFIC
+	led_enable_fade = 0;  /* default to stock behaviour = blink */
+//	led_intensity =  0;   /* default to CM behaviour = brighter blink intensity allowed */
+	led_intensity = 40;   /* default to Samsung behaviour = normal intensity */
+	led_speed = 1;        /* default to stock behaviour = normal blinking/fading speed */
+	led_slope_up_1 = 1;   /* default slope durations for fading */
+	led_slope_up_2 = 1;
+	led_slope_down_1 = 1;
+	led_slope_down_2 = 1;
+
 	led_dev = device_create(sec_class, NULL, 0, data, "led");
 	if (IS_ERR(led_dev)) {
 		dev_err(&client->dev,
@@ -928,6 +1171,22 @@ static int an30259a_remove(struct i2c_client *client)
 	struct an30259a_data *data = i2c_get_clientdata(client);
 	int i;
 	dev_dbg(&client->adapter->dev, "%s\n", __func__);
+	
+	// this is not an ugly hack to shutdown led.
+	data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << 0);
+	data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << 1);
+	data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_ON << 2);
+	data->shadow_reg[AN30259A_REG_LED1CNT2 + 0 * 4] &= ~AN30259A_MASK_DELAY;
+	data->shadow_reg[AN30259A_REG_LED1CNT2 + 1 * 4] &= ~AN30259A_MASK_DELAY;
+	data->shadow_reg[AN30259A_REG_LED1CNT2 + 2 * 4] &= ~AN30259A_MASK_DELAY;
+	data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_SLOPE_MODE << 0);
+	data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_SLOPE_MODE << 1);
+	data->shadow_reg[AN30259A_REG_LEDON] &= ~(LED_SLOPE_MODE << 2);
+	data->shadow_reg[AN30259A_REG_LED1CC + 0] = 0;
+	data->shadow_reg[AN30259A_REG_LED1CC + 1] = 0;
+	data->shadow_reg[AN30259A_REG_LED1CC + 2] = 0;
+	msleep(200);	
+	
 #ifdef SEC_LED_SPECIFIC
 	sysfs_remove_group(&led_dev->kobj, &sec_led_attr_group);
 #endif
@@ -937,6 +1196,7 @@ static int an30259a_remove(struct i2c_client *client)
 		led_classdev_unregister(&data->leds[i].cdev);
 		cancel_work_sync(&data->leds[i].brightness_work);
 	}
+	
 	mutex_destroy(&data->mutex);
 	kfree(data);
 	return 0;

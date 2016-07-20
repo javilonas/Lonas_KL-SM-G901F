@@ -98,8 +98,8 @@ on post-fs
 service gpu_snapshotd /system/bin/gpu_snapshotd -s /sys/class/kgsl/kgsl-3d0/snapshot -d /data/log/ -m 0700
     class late_start
     user system
-    group system  
- 
+    group system
+
 # Allow usb charging to be disabled peristently
 on property:persist.usb.chgdisabled=1
     write /sys/class/power_supply/battery/charging_enabled 0
@@ -113,20 +113,10 @@ service qfipsverify /system/bin/qfipsverify
    group root
    oneshot
 
-service qrngd /system/bin/qrngd -f
-   class main
-   user root
-   group root
-
 service qseecomd /system/bin/qseecomd
    class core
    user root
    group root
-
-service mpdecision /system/bin/mpdecision --avg_comp
-   class main
-   user root
-   disabled
 
 service thermal-engine /system/bin/thermal-engine
    class main
@@ -240,7 +230,7 @@ service imsdatadaemon /system/bin/imsdatadaemon
     class main
     user system
     socket ims_datad stream 0660 system radio
-    group system ims wifi radio inet net_raw log qcom_diag net_admin
+    group system wifi radio inet net_raw log qcom_diag net_admin
     disabled
 
 service mdm_helper /system/bin/mdm_helper
@@ -318,8 +308,8 @@ on property:sys.ims.QMI_DAEMON_STATUS=1
 service ims_rtp_daemon /system/bin/ims_rtp_daemon
    class main
    user system
-   socket ims_rtpd stream 0660 system ims
-   group ims net_raw diag qcom_diag log
+   socket ims_rtpd stream 0660 system radio
+   group radio net_raw diag qcom_diag log
    disabled
 
 on property:sys.ims.DATA_DAEMON_STATUS=1
@@ -395,6 +385,7 @@ on property:ro.SecEDS.enable=false
 on property:dev.bootcomplete=1
     write /sys/module/rmnet_usb/parameters/dump_ctrl_msg 2
     write /sys/module/mhi/parameters/mhi_uci_dump 2
+    write /sys/class/net/rmnet_mhi0/queues/rx-0/rps_cpus 1
 
 on property:vold.decrypt=1
     mount tmpfs tmpfs /cpdump size=150M,mode=0700,uid=0,gid=0

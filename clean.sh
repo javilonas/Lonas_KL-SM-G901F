@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2015 Javier Sayago <admin@lonasdigital.com>
+# Copyright (c) 2016 Javier Sayago <admin@lonasdigital.com>
 # Contact: javilonas@esp-desarrolladores.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,10 @@
 # limitations under the License.
 #
 
-TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/arm-eabi-4.9/bin/arm-eabi-"
-DIR="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F"
+export TOOLCHAIN="/home/lonas/Kernel_Lonas/toolchains/linaro-arm-eabi-6.0-cortex-a15/bin/arm-eabi-"
+export ROOTFS_PATH="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/ramdisk"
+export WIFI_PATCH="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F/drivers/staging/qcacld-2.0/firmware_bin"
+export DIR="/home/lonas/Kernel_Lonas/Lonas_KL-SM-G901F"
 export KERNELDIR=`readlink -f .`
 
 echo "#################### Eliminando Restos ####################"
@@ -48,6 +50,13 @@ fi
 echo "#################### Eliminando build anterior ####################"
 
 find -name '*.ko' -exec rm -rf {} \;
+rm $ROOTFS_PATH/res/etc/firmware/wlan/qca_cld/*.dat > /dev/null 2>&1
+rm $ROOTFS_PATH/res/etc/firmware/wlan/qca_cld/*.bin > /dev/null 2>&1
+rm $ROOTFS_PATH/res/etc/firmware/wlan/qca_cld/*_cfg.ini > /dev/null 2>&1
+
+rm $ROOTFS_PATH/res/etc/wifi/*.bin > /dev/null 2>&1
+rm $ROOTFS_PATH/res/etc/wifi/*_cfg.ini > /dev/null 2>&1
+
 rm -rf $KERNELDIR/arch/arm/boot/zImage > /dev/null 2>&1
 rm -rf $KERNELDIR/arch/arm/boot/zImage-dtb > /dev/null 2>&1
 rm -rf $KERNELDIR/arch/arm/boot/Image > /dev/null 2>&1

@@ -18,6 +18,9 @@
 
 LOG_FILE=/data/Kernel_sleepers.log
 
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
+
 if [ -e $LOG_FILE ]; then
 	rm $LOG_FILE
 fi

@@ -1,6 +1,6 @@
 #!/system/bin/sh
 #
-# Copyright (c) 2015 Javier Sayago <admin@lonasdigital.com>
+# Copyright (c) 2016 Javier Sayago <admin@lonasdigital.com>
 # Contact: javilonas@esp-desarrolladores.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,9 @@
 
 LOG_FILE=/data/Wifi_sleeper.log
 
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
+
 if [ -e $LOG_FILE ]; then
 	rm $LOG_FILE
 fi
@@ -30,7 +33,7 @@ echo "" | tee -a $LOG_FILE
 echo "$( date +"%m-%d-%Y %H:%M:%S" ) Activating wifi sleeper.." | tee -a $LOG_FILE
 
 # wifi_idle_wait value = 15 seconds
-sqlite=/system/xbin/sqlite3
+sqlite=/sbin/sqlite3
 wifi_idle_wait=15000
 
 RETURN_VALUE=$($sqlite /data/data/com.android.providers.settings/databases/settings.db "select value from secure where name='wifi_idle_ms'")

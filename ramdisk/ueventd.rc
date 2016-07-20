@@ -15,10 +15,6 @@ subsystem adf
 /dev/hidraw1              0664   root       system
 /dev/ovr*                 0664   root       system
 
-# Anyone can read the logs, but if they're not in the "logs"
-# group, then they'll only see log entries for their UID.
-/dev/log/*                0666   root       log
-
 # the msm hw3d client device node is world writable/readable
 /dev/msm_hw3dc            0666   root       root
 
@@ -27,9 +23,6 @@ subsystem adf
 
 # gpu driver for adreno200 is globally accessible
 /dev/kgsl                 0666   root       root
-
-# kms driver for drm based gpu
-/dev/dri/*                0666   root       graphics
 
 # these should not be world writable
 /dev/diag_arm9            0660   radio      radio
@@ -41,19 +34,15 @@ subsystem adf
 /dev/alarm                0664   system     radio
 /dev/rtc0                 0640   system     system
 /dev/tty0                 0660   root       system
-/dev/graphics/*           0660   system     graphics
 /dev/msm_hw3dm            0660   system     graphics
-/dev/input/*              0660   root       input
 /dev/eac                  0660   root       audio
 /dev/cam                  0660   root       camera
 /dev/pmem                 0660   system     graphics
 /dev/pmem_adsp*           0660   system     audio
 /dev/pmem_camera*         0660   system     camera
-/dev/oncrpc/*             0660   root       system
-/dev/adsp/*               0660   system     audio
-/dev/snd/*                0660   system     audio
+
 /dev/mt9t013              0660   system     system
-/dev/msm_camera/*         0660   system     system
+
 /dev/akm8976_daemon       0640   compass    system
 /dev/akm8976_aot          0640   compass    system
 /dev/akm8973_daemon       0640   compass    system
@@ -82,7 +71,7 @@ subsystem adf
 /dev/qmi0                 0640   radio      radio
 /dev/qmi1                 0640   radio      radio
 /dev/qmi2                 0640   radio      radio
-/dev/bus/usb/*            0660   root       usb
+
 /dev/mtp_usb              0660   root       mtp
 /dev/usb_accessory        0660   root       usb
 /dev/tun                  0660   system     vpn
@@ -93,9 +82,10 @@ subsystem adf
 /dev/ppp                  0660   radio      vpn
 
 # sysfs properties
+/sys/devices/platform/trusty.*      trusty_version        0440  root   log
 /sys/devices/virtual/input/input*   enable      0660  root   input
 /sys/devices/virtual/input/input*   poll_delay  0660  root   input
-/sys/devices/virtual/usb_composite/*   enable      0664  root   system
+
 /sys/devices/system/cpu/cpu*   cpufreq/scaling_max_freq   0664  system system
 /sys/devices/system/cpu/cpu*   cpufreq/scaling_min_freq   0664  system system
 
@@ -112,3 +102,37 @@ subsystem adf
 
 # Reactivation Lock
 /dev/block/mmcblk0rpmb	0660	system	system
+
+# Google FRP solution
+/dev/block/platform/msm_sdcc.1/by-name/persistent    0660    system    system
+
+#Modem interface
+/dev/gsm*                 0660   system     radio
+
+# kms driver for drm based gpu
+/dev/dri/*                0666   root       graphics
+# Anyone can read the logs, but if they're not in the "logs"
+# group, then they'll only see log entries for their UID.
+/dev/log/*                0666   root       log
+/sys/devices/virtual/usb_composite/*   enable      0664  root   system
+/dev/bus/usb/*            0660   root       usb
+/dev/msm_camera/*         0660   system     system
+/dev/oncrpc/*             0660   root       system
+/dev/adsp/*               0660   system     audio
+/dev/snd/*                0660   system     audio
+/dev/graphics/*           0660   system     graphics
+/dev/input/*              0660   root       input
+#*/#
+# kms driver for drm based gpu
+/dev/dri/.*                0666   root       graphics
+# Anyone can read the logs, but if they're not in the "logs"
+# group, then they'll only see log entries for their UID.
+/dev/log/.*                0666   root       log
+/sys/devices/virtual/usb_composite/.*   enable      0664  root   system
+/dev/bus/usb/.*            0660   root       usb
+/dev/msm_camera/.*         0660   system     system
+/dev/oncrpc/.*             0660   root       system
+/dev/adsp/.*               0660   system     audio
+/dev/snd/.*                0660   system     audio
+/dev/graphics/.*           0660   system     graphics
+/dev/input/.*              0660   root       input

@@ -29,6 +29,13 @@ extern int poweroff_charging;
 #include <linux/earlysuspend.h>
 #endif
 
+#if defined(CONFIG_SEC_LENTIS_PROJECT)
+#define CYPRESS_RECENT_BACK_REPORT_FW_VER 0x24
+#elif defined(CONFIG_SEC_KCCAT6_PROJECT)
+#define CYPRESS_RECENT_BACK_REPORT_FW_VER 0x1D
+#else
+#define CYPRESS_RECENT_BACK_REPORT_FW_VER 0xFF
+#endif
 
 #if defined(CONFIG_KEYBOARD_CYPRESS_TOUCHKEY)
 /* Touchkey Register */
@@ -40,6 +47,7 @@ extern int poweroff_charging;
 #define CYPRESS_MODULE_VER		0X05
 #define CYPRESS_DEVICE_VER		0X06
 #define CYPRESS_STATUS_FLAG		0X07
+#define CYPRESS_REG_DETECTION_FLAG	0x08
 #define CYPRESS_THRESHOLD		0X09
 #define CYPRESS_THRESHOLD2		0X0A
 #define CYPRESS_THRESHOLD3		0X0B
@@ -102,7 +110,8 @@ extern int poweroff_charging;
 #define TK_BIT_CMD_TA_ON	0x02    /* Ta mode */
 #define TK_BIT_CMD_REGULAR	0x01    /* regular mode = normal mode */
 
-#define TK_BIT_WRITE_CONFIRM	0xAA
+#define TK_BIT_WRITE_CONFIRM		0xAA
+#define TK_BIT_DETECTION_CONFIRM	0xEE
 
 /* STATUS FLAG */
 #if defined(CONFIG_KEYBOARD_CYPRESS_TOUCHKEY_H)
@@ -124,6 +133,7 @@ extern int poweroff_charging;
 #define PRESS_BIT_MASK		0X08
 #define KEYCODE_BIT_MASK	0X07
 
+#define TK_CMD_DUAL_DETECTION	0x01
 #define TK_CMD_LED_ON		0x10
 #define TK_CMD_LED_OFF		0x20
 

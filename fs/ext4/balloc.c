@@ -511,7 +511,7 @@ static int ext4_has_free_clusters(struct ext4_sb_info *sbi,
 	 * r_blocks_count should always be multiple of the cluster ratio so
 	 * we are safe to do a plane bit shift only.
 	 */
-	rsv = (ext4_r_blocks_count(sbi->s_es) >> sbi->s_cluster_bits) +
+	rsv = (atomic64_read(&sbi->s_r_blocks_count) >> sbi->s_cluster_bits) +
 	      resv_clusters;
 
 	if (free_clusters - (nclusters + rsv + dirty_clusters) <
@@ -682,11 +682,15 @@ ext4_fsblk_t ext4_count_free_clusters(struct super_block *sb)
 
 static inline int test_root(ext4_group_t a, int b)
 {
-	int num = b;
-
-	while (a > num)
-		num *= b;
-	return num == a;
+	while (1) {
+		if (a < b)
+			return 0;
+		if (a == b)
+			return 1;
+		if ((a % b) != 0)
+			return 0;
+		a = a / b;
+	}
 }
 
 static int ext4_group_sparse(ext4_group_t group)

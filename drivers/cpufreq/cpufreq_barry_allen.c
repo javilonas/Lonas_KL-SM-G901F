@@ -2,10 +2,10 @@
  * drivers/cpufreq/cpufreq_barry_allen.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2015 Javier Sayago <admin@lonasdigital.com>
+ * Copyright (C) 2016 Javier Sayago <admin@lonasdigital.com>
  *
- * Barry_Allen Version 1.0
- * Last Update >> 13-06-2015
+ * Barry_Allen Version 1.1
+ * Last Update >> 03-03-2016
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -137,7 +137,7 @@ static int timer_slack_val = DEFAULT_TIMER_SLACK;
 // Stock Note4 = 2649600
 #define TOP_STOCK_FREQ 2496000
 
-static bool io_is_busy;
+static bool io_is_busy = true;
 
 /*
  * If the max load among other CPUs is higher than up_threshold_any_cpu_load
@@ -171,7 +171,7 @@ static void cpufreq_barry_allen_timer_resched(
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	pcpu->time_in_idle =
 		get_cpu_idle_time(smp_processor_id(),
-				  &pcpu->time_in_idle_timestamp, io_is_busy);
+				&pcpu->time_in_idle_timestamp, io_is_busy);
 	pcpu->cputime_speedadj = 0;
 	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
 	expires = jiffies + usecs_to_jiffies(timer_rate);
@@ -210,7 +210,7 @@ static void cpufreq_barry_allen_timer_start(int cpu, int time_override)
 	spin_lock_irqsave(&pcpu->load_lock, flags);
 	pcpu->time_in_idle =
 		get_cpu_idle_time(cpu, &pcpu->time_in_idle_timestamp,
-				  io_is_busy);
+				io_is_busy);
 	pcpu->cputime_speedadj = 0;
 	pcpu->cputime_speedadj_timestamp = pcpu->time_in_idle_timestamp;
 	spin_unlock_irqrestore(&pcpu->load_lock, flags);
@@ -278,8 +278,8 @@ static unsigned int choose_freq(
 		 */
 
 		if (cpufreq_frequency_table_target(
-			    pcpu->policy, pcpu->freq_table, loadadjfreq / tl,
-			    CPUFREQ_RELATION_C, &index))
+				pcpu->policy, pcpu->freq_table, loadadjfreq / tl,
+				CPUFREQ_RELATION_C, &index))
 			break;
 		freq = pcpu->freq_table[index].frequency;
 
@@ -293,9 +293,9 @@ static unsigned int choose_freq(
 				 * than freqmax.
 				 */
 				if (cpufreq_frequency_table_target(
-					    pcpu->policy, pcpu->freq_table,
-					    freqmax - 1, CPUFREQ_RELATION_H,
-					    &index))
+						pcpu->policy, pcpu->freq_table,
+						freqmax - 1, CPUFREQ_RELATION_H,
+						&index))
 					break;
 				freq = pcpu->freq_table[index].frequency;
 
@@ -320,9 +320,9 @@ static unsigned int choose_freq(
 				 * than freqmin.
 				 */
 				if (cpufreq_frequency_table_target(
-					    pcpu->policy, pcpu->freq_table,
-					    freqmin + 1, CPUFREQ_RELATION_C,
-					    &index))
+						pcpu->policy, pcpu->freq_table,
+						freqmin + 1, CPUFREQ_RELATION_C,
+						&index))
 					break;
 				freq = pcpu->freq_table[index].frequency;
 
@@ -408,7 +408,7 @@ static void cpufreq_barry_allen_timer(unsigned long data)
 
 	if (cpu_load >= go_hispeed_load || boosted) {
 		if (pcpu->policy->cur < hispeed_freq &&
-		    cpu_load <= MAX_LOCAL_LOAD) {
+			cpu_load <= MAX_LOCAL_LOAD) {
 			new_freq = hispeed_freq;
 		} else {
 			new_freq = choose_freq(pcpu, loadadjfreq);
@@ -444,10 +444,10 @@ static void cpufreq_barry_allen_timer(unsigned long data)
 	}
 
 	if (cpu_load <= MAX_LOCAL_LOAD &&
-	    pcpu->policy->cur >= hispeed_freq &&
-	    new_freq > pcpu->policy->cur &&
-	    now - pcpu->hispeed_validate_time <
-	    freq_to_above_hispeed_delay(pcpu->policy->cur)) {
+		pcpu->policy->cur >= hispeed_freq &&
+		new_freq > pcpu->policy->cur &&
+		now - pcpu->hispeed_validate_time <
+		freq_to_above_hispeed_delay(pcpu->policy->cur)) {
 		trace_cpufreq_barry_allen_notyet(
 			data, cpu_load, pcpu->target_freq,
 			pcpu->policy->cur, new_freq);
@@ -455,8 +455,8 @@ static void cpufreq_barry_allen_timer(unsigned long data)
 	}
 
 	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
-					   new_freq, CPUFREQ_RELATION_C,
-					   &index))
+					new_freq, CPUFREQ_RELATION_C,
+					&index))
 		goto rearm;
 
 	new_freq = pcpu->freq_table[index].frequency;
@@ -612,7 +612,7 @@ static int cpufreq_barry_allen_speedchange_task(void *data)
 
 		if (cpumask_empty(&speedchange_cpumask)) {
 			spin_unlock_irqrestore(&speedchange_cpumask_lock,
-					       flags);
+						flags);
 			schedule();
 
 			if (kthread_should_stop())
@@ -658,8 +658,8 @@ static int cpufreq_barry_allen_speedchange_task(void *data)
 				}
 			}
 			trace_cpufreq_barry_allen_setspeed(cpu,
-						     pcpu->target_freq,
-						     pcpu->policy->cur);
+							 pcpu->target_freq,
+							 pcpu->policy->cur);
 
 			up_read(&pcpu->enable_sem);
 		}
@@ -805,7 +805,7 @@ static ssize_t show_target_loads(
 
 	for (i = 0; i < ntarget_loads; i++)
 		ret += sprintf(buf + ret, "%u%s", target_loads[i],
-			       i & 0x1 ? ":" : " ");
+				i & 0x1 ? ":" : " ");
 
 	ret += sprintf(buf + --ret, "\n");
 	spin_unlock_irqrestore(&target_loads_lock, flags);
@@ -851,7 +851,7 @@ static ssize_t show_above_hispeed_delay(
 
 	for (i = 0; i < nabove_hispeed_delay; i++)
 		ret += sprintf(buf + ret, "%u%s", above_hispeed_delay[i],
-			       i & 0x1 ? ":" : " ");
+				i & 0x1 ? ":" : " ");
 
 	ret += sprintf(buf + --ret, "\n");
 	spin_unlock_irqrestore(&above_hispeed_delay_lock, flags);
@@ -885,14 +885,14 @@ static struct global_attr above_hispeed_delay_attr =
 		show_above_hispeed_delay, store_above_hispeed_delay);
 
 static ssize_t show_hispeed_freq(struct kobject *kobj,
-				 struct attribute *attr, char *buf)
+				struct attribute *attr, char *buf)
 {
 	return sprintf(buf, "%u\n", hispeed_freq);
 }
 
 static ssize_t store_hispeed_freq(struct kobject *kobj,
-				  struct attribute *attr, const char *buf,
-				  size_t count)
+				struct attribute *attr, const char *buf,
+				size_t count)
 {
 	int ret;
 	long unsigned int val;
@@ -900,7 +900,7 @@ static ssize_t store_hispeed_freq(struct kobject *kobj,
 	if (ba_locked)
 		return count;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 	hispeed_freq = val;
@@ -926,7 +926,7 @@ static ssize_t store_sampling_down_factor(struct kobject *kobj,
 	if (ba_locked)
 		return count;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 	sampling_down_factor = val;
@@ -938,7 +938,7 @@ static struct global_attr sampling_down_factor_attr =
 		show_sampling_down_factor, store_sampling_down_factor);
 
 static ssize_t show_go_hispeed_load(struct kobject *kobj,
-				     struct attribute *attr, char *buf)
+					 struct attribute *attr, char *buf)
 {
 	return sprintf(buf, "%lu\n", go_hispeed_load);
 }
@@ -952,7 +952,7 @@ static ssize_t store_go_hispeed_load(struct kobject *kobj,
 	if (ba_locked)
 		return count;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 	go_hispeed_load = val;
@@ -977,7 +977,7 @@ static ssize_t store_min_sample_time(struct kobject *kobj,
 	if (ba_locked)
 		return count;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 	min_sample_time = val;
@@ -1002,7 +1002,7 @@ static ssize_t store_timer_rate(struct kobject *kobj,
 	if (ba_locked)
 		return count;
 
-	ret = strict_strtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, &val);
 	if (ret < 0)
 		return ret;
 
@@ -1076,13 +1076,13 @@ static struct global_attr ba_locked_attr = __ATTR(ba_locked, 0644,
 define_one_global_rw(timer_slack);
 
 static ssize_t show_boost(struct kobject *kobj, struct attribute *attr,
-			  char *buf)
+			char *buf)
 {
 	return sprintf(buf, "%d\n", boost_val);
 }
 
 static ssize_t store_boost(struct kobject *kobj, struct attribute *attr,
-			   const char *buf, size_t count)
+			const char *buf, size_t count)
 {
 	int ret;
 	unsigned long val;
@@ -1288,8 +1288,8 @@ static struct attribute_group barry_allen_attr_group = {
 };
 
 static int cpufreq_barry_allen_idle_notifier(struct notifier_block *nb,
-					     unsigned long val,
-					     void *data)
+						 unsigned long val,
+						 void *data)
 {
 	switch (val) {
 	case IDLE_START:
@@ -1462,9 +1462,9 @@ static int cpufreq_governor_barry_allen(struct cpufreq_policy *policy,
 				 */
 				expire_time = pcpu->cpu_timer.expires - jiffies;
 				expire_time = min(usecs_to_jiffies(timer_rate),
-						  expire_time);
+						expire_time);
 				expire_time = max(MIN_TIMER_JIFFIES,
-						  expire_time);
+						expire_time);
 
 				cpufreq_barry_allen_timer_start(j, expire_time);
 				pcpu->nr_timer_resched++;
@@ -1505,7 +1505,7 @@ static int __init cpufreq_barry_allen_init(void)
 	mutex_init(&gov_lock);
 	speedchange_task =
 		kthread_create(cpufreq_barry_allen_speedchange_task, NULL,
-			       "cfbarry_allen");
+				"cfbarry_allen");
 	if (IS_ERR(speedchange_task))
 		return PTR_ERR(speedchange_task);
 
