@@ -8,6 +8,9 @@
 #include <linux/stddef.h>
 #include <linux/mm.h>
 #include <linux/mmzone.h>
+#include <linux/module.h>
+
+EXPORT_SYMBOL(is_cma_pageblock);
 
 struct pglist_data *first_online_pgdat(void)
 {
