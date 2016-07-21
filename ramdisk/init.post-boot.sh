@@ -282,10 +282,10 @@ chmod -h 0664 /sys/class/devfreq/0.qcom,cpubw/min_freq
 
 #Set default values on boot
 echo "240000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
-echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
+echo "700000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
 
 # -10mv (Ahorro batería ON)
-echo "670 680 690 700 710 720 730 740 750 810 820 830 840 850 860 870 880 890 900 910 920 930 940 950 965 980 995 1010 1025 1030 1045 1060" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
+#echo "670 680 690 700 710 720 730 740 750 810 820 830 840 850 860 870 880 890 900 910 920 930 940 950 965 980 995 1010 1025 1030 1045 1060" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table
 
 sleep 0.5s
 
@@ -336,6 +336,13 @@ sleep 0.3s
 
 # Init Gps
 /res/ext/gps.sh > /dev/null 2>&1
+
+# Init Liberar RAM
+/res/ext/libera_ram.sh > /dev/null 2>&1
+
+sleep 0.2s
+
+sync
 
 # Kernel panic setup
 if [ -e /proc/sys/kernel/panic_on_oops ]; then 
@@ -503,7 +510,7 @@ chmod -h 0666 /sys/module/intelli_plug/parameters/nr_run_hysteresis
 
 echo "883200" > /sys/module/intelli_plug/parameters/screen_off_max
 echo "0" > /sys/module/intelli_plug/parameters/touch_boost_active
-echo "1" > /sys/module/intelli_plug/parameters/nr_run_profile_sel
+echo "2" > /sys/module/intelli_plug/parameters/nr_run_profile_sel
 
 # Activate simple GPU alogarithm
 echo "4" > /sys/module/simple_gpu_algorithm/parameters/simple_laziness
@@ -567,13 +574,6 @@ sync
 
 # Force Disable Mpdecision
 stop mpdecision
-
-# Init Liberar RAM
-/res/ext/libera_ram.sh > /dev/null 2>&1
-
-sleep 0.2s
-
-sync
 
 mount -o remount,ro -t auto /
 mount -t rootfs -o remount,ro rootfs
