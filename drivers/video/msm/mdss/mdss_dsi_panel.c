@@ -1596,6 +1596,9 @@ int mdss_dsi_panel_init(struct device_node *node,
 	int rc = 0;
 	static const char *panel_name;
 	struct mdss_panel_info *pinfo;
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	struct samsung_display_driver_data *vdd = NULL;
+#endif
 
 	if (!node || !ctrl_pdata) {
 		pr_err("%s: Invalid arguments\n", __func__);
@@ -1617,6 +1620,13 @@ int mdss_dsi_panel_init(struct device_node *node,
 		pr_err("%s:%d panel dt parse failed\n", __func__, __LINE__);
 		return rc;
 	}
+
+#if defined(CONFIG_FB_MSM_MDSS_SAMSUNG)
+	mdss_samsung_panel_init(node, ctrl_pdata);
+	mdss_samsung_panel_parse_dt(node, ctrl_pdata);
+	vdd = check_valid_ctrl(ctrl_pdata);
+	pinfo->panel_state = false;
+#endif
 
 	if (!cmd_cfg_cont_splash)
 		pinfo->cont_splash_enabled = false;

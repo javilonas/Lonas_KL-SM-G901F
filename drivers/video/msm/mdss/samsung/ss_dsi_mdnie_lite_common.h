@@ -38,6 +38,7 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
 
 #define NAME_STRING_MAX 30
 #define MDNIE_COLOR_BLINDE_CMD_SIZE 18
+#define COORDINATE_DATA_SIZE 6
 
 extern char mdnie_app_name[][NAME_STRING_MAX];
 extern char mdnie_mode_name[][NAME_STRING_MAX];
@@ -328,6 +329,7 @@ struct mdnie_lite_tune_data {
 struct mdnie_lite_tun_type* init_dsi_tcon_mdnie_class(int index, struct samsung_display_driver_data *vdd_data);
 int update_dsi_tcon_mdnie_register(struct samsung_display_driver_data *vdd);
 void coordinate_tunning(int index, char *coordinate_data, int scr_wr_addr, int data_size);
+void coordinate_tunning_multi(int index, char (*coordinate_data_multi[MAX_MODE])[COORDINATE_DATA_SIZE], int mdnie_tune_index, int scr_wr_addr, int data_size);
 /* COMMON FUNCTION END*/
 
 #endif /*_DSI_TCON_MDNIE_H_*/

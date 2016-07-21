@@ -1500,12 +1500,27 @@ static int task_has_perm(const struct task_struct *tsk1,
 			 const struct task_struct *tsk2,
 			 u32 perms)
 {
+#ifdef CONFIG_TIMA_RKP_RO_CRED
+	volatile struct task_security_struct *tsec1, *tsec2;
+#else
 	const struct task_security_struct *__tsec1, *__tsec2;
+#endif /*CONFIG_TIMA_RKP_RO_CRED*/
 	u32 sid1, sid2;
 
 	rcu_read_lock();
+#ifdef CONFIG_TIMA_RKP_RO_CRED
+	/* We think kernel has potential problem.
+	 * There was no update the cred->security member so we try to read the proper value.
+	 * We don't add other code. If the cred->security is 0x07, anyway kernel enters panic.
+	*/
+	while((u32)(tsec1 = __task_cred(tsk1)->security) == (u32)0x07);	
+	while((u32)(tsec2 = __task_cred(tsk2)->security) == (u32)0x07);	
+	sid1 = tsec1->sid;
+	sid2 = tsec2->sid;
+#else
 	__tsec1 = __task_cred(tsk1)->security;	sid1 = __tsec1->sid;
 	__tsec2 = __task_cred(tsk2)->security;	sid2 = __tsec2->sid;
+#endif /*CONFIG_TIMA_RKP_RO_CRED*/
 	rcu_read_unlock();
 	return avc_has_perm(sid1, sid2, SECCLASS_PROCESS, perms, NULL);
 }

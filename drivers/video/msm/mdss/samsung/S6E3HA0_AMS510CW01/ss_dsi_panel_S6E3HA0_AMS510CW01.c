@@ -32,56 +32,13 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
 #include "ss_dsi_panel_S6E3HA0_AMS510CW01.h"
 #include "ss_dsi_mdnie_S6E3HA0_AMS510CW01.h"
 
-unsigned int ldi_vddm_lut[128][2] = {
-	{0, 12}, {1, 12}, {2, 13}, {3, 14}, {4, 15}, {5, 16}, {6, 17}, {7, 18}, {8, 19}, {9, 20},
-	{10, 22}, {11, 23}, {12, 24}, {13, 25}, {14, 26}, {15, 27}, {16, 28}, {17, 29}, {18, 30}, {19, 31},
-	{20, 32}, {21, 33}, {22, 34}, {23, 35}, {24, 37}, {25, 38}, {26, 39}, {27, 40}, {28, 41}, {29, 42},
-	{30, 43}, {31, 44}, {32, 45}, {33, 46}, {34, 47}, {35, 48}, {36, 49}, {37, 50}, {38, 51}, {39, 53},
-	{40, 54}, {41, 55}, {42, 56}, {43, 57}, {44, 58}, {45, 59}, {46, 60}, {47, 61}, {48, 62}, {49, 63},
-	{50, 63}, {51, 63}, {52, 63}, {53, 63}, {54, 63}, {55, 63}, {56, 63}, {57, 63}, {58, 63}, {59, 63},
-	{60, 63}, {61, 63}, {62, 63}, {63, 63}, {64, 11}, {65, 10}, {66, 9}, {67, 8}, {68, 7}, {69, 6},
-	{70, 4}, {71, 3}, {72, 2}, {73, 1}, {74, 64}, {75, 65}, {76, 66}, {77, 67}, {78, 68}, {79, 69},
-	{80, 70}, {81, 71}, {82, 72}, {83, 73}, {84, 74}, {85, 76}, {86, 77}, {87, 78}, {88, 79}, {89, 80},
-	{90, 81}, {91, 82}, {92, 83}, {93, 84}, {94, 85}, {95, 86}, {96, 87}, {97, 88}, {98, 89}, {99, 91},
-	{100, 92}, {101, 93}, {102, 94}, {103, 95}, {104, 96}, {105, 97}, {106, 98}, {107, 99}, {108, 100}, {109, 101},
-	{110, 102}, {111, 103}, {112, 104}, {113, 105}, {114, 107}, {115, 108}, {116, 109}, {117, 110}, {118, 111}, {119, 112},
-	{120, 113}, {121, 114}, {122, 115}, {123, 116}, {124, 117}, {125, 118}, {126, 119}, {127, 120},
-};
-
 static int mdss_panel_on_pre(struct mdss_dsi_ctrl_pdata *ctrl)
 {
-	unsigned int vdd_offset, vddm_offset;
-	char vol_ref_buffer, vol_ref_buffer2;
-
 	struct samsung_display_driver_data *vdd = check_valid_ctrl(ctrl);
 
 	if (IS_ERR_OR_NULL(vdd)) {
 		pr_err("%s: Invalid data ctrl : 0x%zx vdd : 0x%zx", __func__, (size_t)ctrl, (size_t)vdd);
 		return false;
-	}
-
-	/* SET VDD OFFSET */
-	if (vdd->dtsi_data[ctrl->ndx].read_vdd_ref_cmds[vdd->panel_revision].cmd_cnt) {
-		mdss_samsung_panel_data_read(ctrl,
-				&(vdd->dtsi_data[ctrl->ndx].read_vdd_ref_cmds[vdd->panel_revision]),
-				&vol_ref_buffer, PANEL_LEVE2_KEY);
-		vdd_offset=(unsigned int)(vol_ref_buffer & 0x7F);
-		pr_info("%s:vddm_offset = %d , ldi_vdd_lut[%d][1] = %d \n", __func__, vdd_offset, vdd_offset, ldi_vddm_lut[vdd_offset][1]);
-		vdd->dtsi_data[ctrl->ndx].write_vdd_offset_cmds[vdd->panel_revision].cmds[3].payload[1] = ldi_vddm_lut[vdd_offset][1];
-	} else {
-		pr_err("%s : no vdd ref cmds..\n", __func__);
-	}
-
-	/* SET VDDM OFFSET */
-	if (vdd->dtsi_data[ctrl->ndx].read_vddm_ref_cmds[vdd->panel_revision].cmd_cnt) {
-		mdss_samsung_panel_data_read(ctrl,
-				&(vdd->dtsi_data[ctrl->ndx].read_vddm_ref_cmds[vdd->panel_revision]),
-				&vol_ref_buffer2, PANEL_LEVE2_KEY);
-		vddm_offset=(unsigned int)(vol_ref_buffer2 & 0x7F);
-		pr_info("%s:vddm_offset = %d , ldi_vddm_lut[%d][1] = %d \n", __func__, vddm_offset, vddm_offset, ldi_vddm_lut[vddm_offset][1]);
-		vdd->dtsi_data[ctrl->ndx].write_vddm_offset_cmds[vdd->panel_revision].cmds[2].payload[1] = ldi_vddm_lut[vddm_offset][1];
-	} else {
-		pr_err("%s : no vddm ref cmds..\n", __func__);
 	}
 
 	return true;
@@ -99,10 +56,7 @@ static int mdss_panel_on_post(struct mdss_dsi_ctrl_pdata *ctrl)
 	pr_info("%s %d\n", __func__, ctrl->ndx);
 
 	mdss_panel_attach_set(ctrl, true);
-	// ADJ_VDDM_OFFSET
-	mdss_samsung_send_cmd(ctrl, PANEL_LDI_SET_VDD_OFFSET);
-	mdss_samsung_send_cmd(ctrl, PANEL_LDI_SET_VDDM_OFFSET);
-
+	
 	return true;
 }
 

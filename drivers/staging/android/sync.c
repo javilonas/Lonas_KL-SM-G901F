@@ -90,14 +90,14 @@ static void sync_timeline_free(struct kref *kref)
 void sync_timeline_destroy(struct sync_timeline *obj)
 {
 	obj->destroyed = true;
+	smp_wmb();
 
 	/*
-	 * If this is not the last reference, signal any children
-	 * that their parent is going away.
+	 * signal any children that their parent is going away.
 	 */
+	sync_timeline_signal(obj);
 
-	if (!kref_put(&obj->kref, sync_timeline_free))
-		sync_timeline_signal(obj);
+	kref_put(&obj->kref, sync_timeline_free);
 }
 EXPORT_SYMBOL(sync_timeline_destroy);
 
@@ -624,6 +624,124 @@ static void sync_pt_log(struct sync_pt *pt)
 		pt->parent->ops->pt_log(pt);
 }
 
+
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+#define FENCE_DEBUG_TIMEOUT 3000
+void kmsg_sync_print_pt(struct sync_pt *pt, bool fence)
+{
+	int status = pt->status;
+	pr_info("  %s%spt %s",
+		   fence ? pt->parent->name : "",
+		   fence ? "_" : "",
+		   sync_status_str(status));
+	if (pt->status) {
+		struct timeval tv = ktime_to_timeval(pt->timestamp);
+		pr_info("@%ld.%06ld", tv.tv_sec, tv.tv_usec);
+	}
+
+	if (pt->parent->ops->timeline_value_str &&
+	    pt->parent->ops->pt_value_str) {
+		char value[64];
+		pt->parent->ops->pt_value_str(pt, value, sizeof(value));
+		pr_info(": %s", value);
+		if (fence) {
+			pt->parent->ops->timeline_value_str(pt->parent, value,
+						    sizeof(value));
+			pr_info(" / %s", value);
+		}
+	} else if (pt->parent->ops->print_pt) {
+		pr_info(": !!!!!!!!!!!!!!!!!");
+//		pt->parent->ops->print_pt(pt); //Jon
+	}
+
+	pr_info("\n");
+}
+
+void kmsg_sync_print_obj(struct sync_timeline *obj)
+{
+	struct list_head *pos;
+	unsigned long flags;
+
+	pr_info("%s %s", obj->name, obj->ops->driver_name);
+
+	if (obj->ops->timeline_value_str) {
+		char value[64];
+		obj->ops->timeline_value_str(obj, value, sizeof(value));
+		pr_info(": %s", value);
+	} else if (obj->ops->print_obj) {
+		pr_info(": ?????????????");
+//		obj->ops->print_obj(obj);//Jon
+	}
+
+	pr_info("\n");
+
+	spin_lock_irqsave(&obj->child_list_lock, flags);
+	list_for_each(pos, &obj->child_list_head) {
+		struct sync_pt *pt =
+			container_of(pos, struct sync_pt, child_list);
+		kmsg_sync_print_pt(pt, false);
+	}
+	spin_unlock_irqrestore(&obj->child_list_lock, flags);
+}
+
+void kmsg_sync_print_fence(struct sync_fence *fence)
+{
+	struct list_head *pos;
+	unsigned long flags;
+
+	pr_info("[%p] %s: %s\n", fence, fence->name,
+		   sync_status_str(fence->status));
+
+	list_for_each(pos, &fence->pt_list_head) {
+		struct sync_pt *pt =
+			container_of(pos, struct sync_pt, pt_list);
+		kmsg_sync_print_pt(pt, true);
+	}
+
+	spin_lock_irqsave(&fence->waiter_list_lock, flags);
+	list_for_each(pos, &fence->waiter_list_head) {
+		struct sync_fence_waiter *waiter =
+			container_of(pos, struct sync_fence_waiter,
+				     waiter_list);
+
+		pr_info("waiter %pF\n", waiter->callback);
+	}
+	spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
+}
+
+int kmsg_sync_debugfs_show(void)
+{
+	unsigned long flags;
+	struct list_head *pos;
+
+	pr_info("objs:\n--------------\n");
+
+	spin_lock_irqsave(&sync_timeline_list_lock, flags);
+	list_for_each(pos, &sync_timeline_list_head) {
+		struct sync_timeline *obj =
+			container_of(pos, struct sync_timeline,
+				     sync_timeline_list);
+
+		kmsg_sync_print_obj(obj);
+		pr_info("\n");
+	}
+	spin_unlock_irqrestore(&sync_timeline_list_lock, flags);
+
+	pr_info("fences:\n--------------\n");
+
+	spin_lock_irqsave(&sync_fence_list_lock, flags);
+	list_for_each(pos, &sync_fence_list_head) {
+		struct sync_fence *fence =
+			container_of(pos, struct sync_fence, sync_fence_list);
+
+		kmsg_sync_print_fence(fence);
+		pr_info("\n");
+	}
+	spin_unlock_irqrestore(&sync_fence_list_lock, flags);
+	return 0;
+}
+#endif
+
 void sync_fence_log(struct sync_fence *fence)
 {
 	struct list_head *pos;
@@ -679,6 +797,13 @@ int sync_fence_wait(struct sync_fence *fence, long timeout)
 	if (fence->status < 0) {
 		pr_info("fence error %d on [%p]\n", fence->status, fence);
 		sync_fence_log(fence);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+		if (timeout >= FENCE_DEBUG_TIMEOUT) {
+			pr_info(">>>>>>>>>>>>>>>>>>>>>>>>>>> BEGIN : dump whole sync_pt for debug purpose");
+			kmsg_sync_debugfs_show();
+			pr_info("<<<<<<<<<<<<<<<<<<<<<<<<<<< END : dump whole sync_pt for debug purpose");
+		}
+#endif
 		return fence->status;
 	}
 
@@ -687,6 +812,13 @@ int sync_fence_wait(struct sync_fence *fence, long timeout)
 			pr_info("fence timeout on [%p] after %dms\n", fence,
 				jiffies_to_msecs(timeout));
 			sync_fence_log(fence);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+			if (timeout >= FENCE_DEBUG_TIMEOUT) {
+				pr_info(">>>>>>>>>>>>>>>>>>>>>>>>>>> BEGIN : dump whole sync_pt for debug purpose");
+				kmsg_sync_debugfs_show();
+				pr_info("<<<<<<<<<<<<<<<<<<<<<<<<<<< END : dump whole sync_pt for debug purpose");
+			}
+#endif
 		}
 		return -ETIME;
 	}

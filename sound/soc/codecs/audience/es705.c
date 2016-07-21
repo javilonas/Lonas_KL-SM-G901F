@@ -5369,6 +5369,7 @@ static __init int es705_init(void)
 	mutex_init(&es705_priv.pm_mutex);
 	mutex_init(&es705_priv.cvq_mutex);
 	mutex_init(&es705_priv.streaming_mutex);
+	mutex_init(&es705_priv.datablock_read_mutex);
 
 	init_waitqueue_head(&es705_priv.stream_in_q);
 

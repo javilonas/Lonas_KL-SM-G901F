@@ -1117,6 +1117,7 @@ static bool sec_bat_temperature_check(
 	} else if ((temp_value <= battery->temp_high_recovery) &&
 				(temp_value >= battery->temp_low_recovery)) {
 		if (battery->health == POWER_SUPPLY_HEALTH_OVERHEAT ||
+			battery->health == POWER_SUPPLY_HEALTH_OVERHEATLIMIT ||
 		    battery->health == POWER_SUPPLY_HEALTH_COLD) {
 			if (battery->temp_recover_cnt <
 				battery->pdata->temp_check_count)

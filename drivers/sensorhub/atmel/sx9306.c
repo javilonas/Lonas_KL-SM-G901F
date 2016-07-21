@@ -288,7 +288,7 @@ static s32 sx9306_get_init_threshold(struct sx9306_p *data)
 		threshold = data->initTh + data->calData[0];
 #ifdef CONFIG_SENSORS_GRIP_SIMDET
 		if (data->sim_type == 1)
-			threshold = threshold + 380;
+			threshold = threshold + 880;
 #endif
 	}
 	return threshold;

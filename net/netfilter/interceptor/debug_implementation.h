@@ -219,6 +219,13 @@
 #include "debug_strbuf.h"
 #include "debug_outputf.h"
 
+void
+debug_disable(
+        void);
+
+void
+debug_enable(
+        void);
 
 struct DebugDumpContext
 {
@@ -253,6 +260,14 @@ debug_set_filename(
 void
 debug_set_filter_filename(
         const char *filename);
+
+void
+debug_set_filter_string(
+        const char *debug_string);
+
+void
+debug_set_prefix(
+        const char *prefix);
 
 void
 debug_set_filter_string(

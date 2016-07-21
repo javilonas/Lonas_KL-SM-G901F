@@ -41,7 +41,11 @@ config SDP
 	default n
 	depends on ECRYPT_FS
 	help
-	Secure Data Protection
+	Sensitive Data Protection
+	
+config SDP_KEY_DUMP
+	bool "SDP KEY DUMP"
+	default n
 
 config FORCE_DISABLE_FIPS
 	bool "Force disable FIPS config"

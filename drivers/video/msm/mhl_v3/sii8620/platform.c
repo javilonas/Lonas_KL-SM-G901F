@@ -1734,7 +1734,6 @@ void sii8620_hdmi_register_mhl(struct sii8620_platform_data *pdata)
 
 	msm_hdmi_register_mhl(pdata->hdmi_pdev,
 			hdmi_mhl_ops, NULL);
-
 	pdata->hdmi_mhl_ops = hdmi_mhl_ops;
 }
 #endif /* CONFIG_MHL3_SEC_FEATURE */

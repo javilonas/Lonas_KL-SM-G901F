@@ -697,7 +697,6 @@ xhci_dbg_log_event(struct dbg_data *d, struct urb *urb, char *event,
 		return;
 
 	if (!urb) {
-		return ;
 		write_lock_irqsave(&d->ctrl_lck, flags);
 		scnprintf(d->ctrl_buf[d->ctrl_idx], DBG_MSG_LEN,
 			"%s: %s : %d", get_timestamp(tbuf), event, extra);
@@ -711,7 +710,6 @@ xhci_dbg_log_event(struct dbg_data *d, struct urb *urb, char *event,
 		return;
 
 	if ((ep_addr & 0x0f) == 0x0) {
-		return ;
 		/*submit event*/
 		if (!xhci_str_to_event(event)) {
 			write_lock_irqsave(&d->ctrl_lck, flags);

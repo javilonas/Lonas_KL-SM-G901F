@@ -2492,8 +2492,9 @@ static void add_kallsyms(struct module *mod, const struct load_info *info)
 
 #ifdef	CONFIG_TIMA_LKMAUTH
 extern pid_t pid_from_lkm;
+#define LKMAUTH_RETRY_CNT 5
 int qseecom_set_bandwidth(struct qseecom_handle *handle, bool high);
-static int lkmauth(Elf_Ehdr *hdr, int len)
+static int lkmauth(Elf_Ehdr *hdr, int len, int cnt)
 {
 	int ret = 0; /* value to be returned for lkmauth */
 	int qsee_ret = 0; /* value used to capture qsee return state */
@@ -2607,7 +2608,8 @@ static int lkmauth(Elf_Ehdr *hdr, int len)
 		envp[1] = result;
 		envp[2] = NULL;
 
-		kobject_uevent_env(&tima_uevent_dev->kobj, KOBJ_CHANGE, envp);
+		if( cnt == (LKMAUTH_RETRY_CNT - 1) )
+			kobject_uevent_env(&tima_uevent_dev->kobj, KOBJ_CHANGE, envp);
 		kfree(envp[0]);
 		kfree(envp[1]);
 	}
@@ -2739,12 +2741,12 @@ static int elf_header_check(struct load_info *info)
 		return -ENOEXEC;
 
 #ifdef CONFIG_TIMA_LKMAUTH
-	if (lkmauth(info->hdr, info->len) != 0) {
-		for(i = 0; i < 5 ; i++) {
-			if (lkmauth(info->hdr, info->len) == 0)
+	if (lkmauth(info->hdr, info->len, 0) != 0) {
+		for(i = 0; i < LKMAUTH_RETRY_CNT ; i++) {
+			if (lkmauth(info->hdr, info->len, i) == 0)
 				goto success;
 		}
-		panic("LKMauth failed");
+		return -ENOEXEC;
 	}
 success:
 #endif

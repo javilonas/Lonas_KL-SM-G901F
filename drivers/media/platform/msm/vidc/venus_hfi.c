@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -79,22 +79,6 @@ struct tzbsp_video_set_state_req {
 	u32 spare; /*reserved for future, should be zero*/
 };
 
-static inline void venus_hfi_set_state(struct venus_hfi_device *device,
-	enum venus_hfi_state state)
-{
-	mutex_lock(&device->write_lock);
-	mutex_lock(&device->read_lock);
-	device->state = state;
-	mutex_unlock(&device->write_lock);
-	mutex_unlock(&device->read_lock);
-}
-	
-static inline bool venus_hfi_core_in_valid_state(
-	struct venus_hfi_device *device)
-{
-	return device->state != VENUS_STATE_DEINIT;
-}
-
 static void venus_hfi_pm_hndlr(struct work_struct *work);
 static DECLARE_DELAYED_WORK(venus_hfi_pm_work, venus_hfi_pm_hndlr);
 
@@ -107,6 +91,22 @@ static inline int venus_hfi_prepare_enable_clks(
 	struct venus_hfi_device *device);
 static inline void venus_hfi_disable_unprepare_clks(
 	struct venus_hfi_device *device);
+
+static inline void venus_hfi_set_state(struct venus_hfi_device *device,
+		enum venus_hfi_state state)
+{
+	mutex_lock(&device->write_lock);
+	mutex_lock(&device->read_lock);
+	device->state = state;
+	mutex_unlock(&device->write_lock);
+	mutex_unlock(&device->read_lock);
+}
+
+static inline bool venus_hfi_core_in_valid_state(
+		struct venus_hfi_device *device)
+{
+	return device->state != VENUS_STATE_DEINIT;
+}
 
 static void venus_hfi_dump_packet(u8 *packet)
 {
@@ -1270,6 +1270,18 @@ static int __unset_free_ocmem(struct venus_hfi_device *device)
 		goto core_in_bad_state;
 	}		
 
+	mutex_lock(&device->write_lock);
+	mutex_lock(&device->read_lock);
+	rc = venus_hfi_core_in_valid_state(device);
+	mutex_unlock(&device->read_lock);
+	mutex_unlock(&device->write_lock);
+
+	if (!rc) {
+		dprintk(VIDC_WARN,
+			"Core is in bad state, Skipping unset OCMEM\n");
+		goto core_in_bad_state;
+	}
+
 	init_completion(&release_resources_done);
 	rc = __unset_ocmem(device);
 	if (rc) {
@@ -2106,6 +2118,8 @@ static int venus_hfi_core_init(void *device)
 	struct hfi_cmd_sys_init_packet pkt;
 	struct hfi_cmd_sys_get_property_packet version_pkt;
 	int rc = 0;
+	struct list_head *ptr, *next;
+	struct hal_session *session = NULL;
 	struct venus_hfi_device *dev;
 
 	if (device) {
@@ -2118,7 +2132,20 @@ static int venus_hfi_core_init(void *device)
 	venus_hfi_set_state(dev, VENUS_STATE_INIT);
 
 	dev->intr_status = 0;
+
+	mutex_lock(&dev->session_lock);
+	list_for_each_safe(ptr, next, &dev->sess_head) {
+		/* This means that session list is not empty. Kick stale
+		 * sessions out of our valid instance list, but keep the
+		 * list_head inited so that list_del (in the future, called
+		 * by session_clean()) will be valid. When client doesn't close
+		 * them, then it is a genuine leak which driver can't fix. */
+		session = list_entry(ptr, struct hal_session, list);
+		list_del_init(&session->list);
+	}
 	INIT_LIST_HEAD(&dev->sess_head);
+	mutex_unlock(&dev->session_lock);
+
 	venus_hfi_set_registers(dev);
 
 	if (!dev->hal_client) {
@@ -2924,13 +2951,13 @@ static void venus_hfi_pm_hndlr(struct work_struct *work)
 	rc = venus_hfi_core_in_valid_state(device);
 	mutex_unlock(&device->read_lock);
 	mutex_unlock(&device->write_lock);
-	
+
 	if (!rc) {
-			dprintk(VIDC_WARN,
-					"Core is in bad state, Skipping power collapse\n");
-			return;
+		dprintk(VIDC_WARN,
+			"Core is in bad state, Skipping power collapse\n");
+		return;
 	}
-						
+
 	dprintk(VIDC_DBG, "Prepare for power collapse\n");
 
 	mutex_lock(&device->resource_lock);
@@ -3025,7 +3052,7 @@ static void venus_hfi_process_msg_event_notify(
 		HFI_EVENT_SYS_ERROR) {
 
 		venus_hfi_set_state(device, VENUS_STATE_DEINIT);
-			
+
 		vsfr = (struct hfi_sfr_struct *)
 				device->sfr.align_virtual_addr;
 		if (vsfr) {
@@ -4002,6 +4029,7 @@ static void *venus_hfi_add_device(u32 device_id,
 		INIT_LIST_HEAD(&hal_ctxt.dev_head);
 
 	INIT_LIST_HEAD(&hdevice->list);
+	INIT_LIST_HEAD(&hdevice->sess_head);
 	list_add_tail(&hdevice->list, &hal_ctxt.dev_head);
 	hal_ctxt.dev_count++;
 

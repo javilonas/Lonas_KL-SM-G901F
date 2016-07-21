@@ -317,7 +317,6 @@
 			29 01 00 00 00 00 02 B6 00
 		];	/* Low Temperature Command: default */
 
-
 		samsung,gamma_tx_cmds_revI = [
 			29 01 00 00 00 00 22            /* Brightness Condition Set - Gamma 2.2 Setting*/
 				CA 01 00 01 00 01 00 80

@@ -390,6 +390,7 @@ scan:
 			cond_resched();
 			latency_ration = LATENCY_LIMIT;
 		}
+		offset++;
 	}
 	offset = si->lowest_bit;
 	while (offset < scan_base) {

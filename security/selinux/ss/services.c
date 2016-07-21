@@ -2028,6 +2028,7 @@ int security_netif_sid(char *name, u32 *if_sid)
 {
 	int rc = 0;
 	struct ocontext *c;
+	u32 tmpsid;
 
 	read_lock(&policy_rwlock);
 
@@ -2383,7 +2384,8 @@ int security_fs_use(
 		}
 		*sid = c->sid[0];
 	} else {
-		rc = __security_genfs_sid(fstype, "/", SECCLASS_DIR, sid);
+		rc = __security_genfs_sid(fstype, "/", SECCLASS_DIR,
+					sid);
 		if (rc) {
 			*behavior = SECURITY_FS_USE_NONE;
 			rc = 0;

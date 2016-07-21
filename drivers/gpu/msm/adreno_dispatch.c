@@ -346,6 +346,12 @@ static int sendcmd(struct adreno_device *adreno_dev,
 		return ret;
 	}
 
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	xlog_fence((char*)__func__, "ctx", cmdbatch->context->id,
+		"ts", cmdbatch->timestamp,
+		"inflight", dispatcher->inflight,
+		NULL, 0, NULL, 0, 0);
+#endif
 	trace_adreno_cmdbatch_submitted(cmdbatch, dispatcher->inflight);
 
 	dispatcher->cmdqueue[dispatcher->tail] = cmdbatch;
@@ -758,6 +764,12 @@ int adreno_dispatcher_queue_cmd(struct adreno_device *adreno_dev,
 		ADRENO_CONTEXT_CMDQUEUE_SIZE;
 
 	drawctxt->queued++;
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	xlog_fence((char*)__func__, "ctx", cmdbatch->context->id,
+		"ts", cmdbatch->timestamp,
+		"queued", drawctxt->queued,
+		"flags", cmdbatch->flags, NULL, 0, 0);
+#endif
 	trace_adreno_cmdbatch_queued(cmdbatch, drawctxt->queued);
 
 
@@ -1460,7 +1472,12 @@ static void adreno_dispatcher_work(struct work_struct *work)
 
 				_print_recovery(device, cmdbatch);
 			}
-
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+			xlog_fence((char*)__func__, "ctx", cmdbatch->context->id,
+				"ts", cmdbatch->timestamp,
+				"inflight", dispatcher->inflight,
+				NULL, 0, NULL, 0, 0);
+#endif
 			trace_adreno_cmdbatch_retired(cmdbatch,
 				dispatcher->inflight - 1);
 

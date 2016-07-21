@@ -354,6 +354,15 @@ int sync_fence_wait(struct sync_fence *fence, long timeout);
  */
 void sync_fence_log(struct sync_fence *fence);
 
+/**
+ * sync_fence_log() - log the details of the fence in the kernel log
+ * @fence:	fence to log
+ *
+ * Log the details of the fence and the associated sync points in the kernel
+ * log.
+ */
+void sync_fence_log(struct sync_fence *fence);
+
 #endif /* __KERNEL__ */
 
 /**

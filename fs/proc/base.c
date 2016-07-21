@@ -1075,6 +1075,13 @@ static const struct file_operations proc_hotness_adjust_operations = {
 };
 #endif
 
+#ifdef CONFIG_SAMP_HOTNESS
+static const struct file_operations proc_hotness_adjust_operations = {
+	.write		= hotness_adjust_write,
+	.llseek		= generic_file_llseek,
+};
+#endif
+
 static ssize_t oom_score_adj_read(struct file *file, char __user *buf,
 					size_t count, loff_t *ppos)
 {
@@ -2746,6 +2753,7 @@ static const struct pid_entry tgid_base_stuff[] = {
 #ifdef CONFIG_PROC_PAGE_MONITOR
 	REG("clear_refs", S_IWUSR, proc_clear_refs_operations),
 	REG("smaps",      S_IRUGO, proc_pid_smaps_operations),
+	REG("smaps_simple", S_IRUGO, proc_pid_smaps_simple_operations),
 	REG("pagemap",    S_IRUGO, proc_pagemap_operations),
 #endif
 #ifdef CONFIG_SECURITY

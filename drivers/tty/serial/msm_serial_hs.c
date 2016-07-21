@@ -1937,7 +1937,16 @@ static int msm_hs_check_clock_off(struct uart_port *uport)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 	struct circ_buf *tx_buf = &uport->state->xmit;
     struct platform_device *pdev = to_platform_device(uport->dev);
+    int cur_clk_state;
 
+    /*
+        * cancel the hrtimer first so that
+        * clk_state can not change in flight
+        */
+    hrtimer_cancel(&msm_uport->clk_off_timer);
+    flush_work(&msm_uport->clock_off_w);
+    cur_clk_state = msm_uport->clk_state;
+    msm_hs_clock_vote(msm_uport);
 	mutex_lock(&msm_uport->clk_mutex);
 	spin_lock_irqsave(&uport->lock, flags);
 

@@ -542,6 +542,11 @@ kgsl_context_destroy(struct kref *kref)
 	struct kgsl_context *context = container_of(kref, struct kgsl_context,
 						    refcount);
 	struct kgsl_device *device = context->device;
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	xlog_fence((char*)__func__, (char*)device->name, 0,
+		"ctx", context->id,
+		NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 
 	trace_kgsl_context_destroy(device, context);
 
@@ -1626,7 +1631,12 @@ static void kgsl_cmdbatch_sync_func(struct kgsl_device *device,
 		struct kgsl_context *context, void *priv, int result)
 {
 	struct kgsl_cmdbatch_sync_event *event = priv;
-
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	xlog_fence((char*)__func__, "ctx", event->cmdbatch->context->id,
+		"sync_ctx", event->context->id,
+		"ts", event->timestamp,
+		NULL, 0, NULL, 0, 0);
+#endif
 	kgsl_cmdbatch_sync_expire(device, event);
 	kgsl_context_put(event->context);
 	/* Put events that have signaled */
@@ -1704,6 +1714,15 @@ EXPORT_SYMBOL(kgsl_cmdbatch_destroy);
 static void kgsl_cmdbatch_sync_fence_func(void *priv)
 {
 	struct kgsl_cmdbatch_sync_event *event = priv;
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	char *name="unknown";
+	if(event->handle && event->handle->fence)
+		name = event->handle->fence->name;
+
+	xlog_fence((char*)__func__, "syncpoint_fence_expirectx", event->cmdbatch->context->id,
+		strncat("name=",name,strlen(name)), 0,
+		NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 
 	kgsl_cmdbatch_sync_expire(event->device, event);
 	/* Put events that have signaled */
@@ -1779,6 +1798,13 @@ static int kgsl_cmdbatch_add_sync_fence(struct kgsl_device *device,
 
 		/* Event no longer needed by this function */
 		kgsl_cmdbatch_sync_event_put(event);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+		if(ret==0) {
+			xlog_fence((char*)__func__, "fence_expire ctx", cmdbatch->context->id,
+				"signaled", 0,
+				NULL, 0, NULL, 0, NULL, 0, 0);
+		}
+#endif
 
 		return ret;
 	}
@@ -1788,6 +1814,11 @@ static int kgsl_cmdbatch_add_sync_fence(struct kgsl_device *device,
 	 * callback and handle to cancel event has been set.
 	 */
 	kgsl_cmdbatch_sync_event_put(event);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	xlog_fence((char*)__func__, "syncpoint_fence ctx", cmdbatch->context->id,
+		strncat("name=",event->handle->fence->name,strlen(event->handle->fence->name)), 0,
+		NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 
 	return 0;
 }
@@ -1871,6 +1902,13 @@ static int kgsl_cmdbatch_add_sync_timestamp(struct kgsl_device *device,
 		kgsl_cmdbatch_put(cmdbatch);
 		kfree(event);
 	}
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	else {
+		xlog_fence((char*)__func__, "ctx", cmdbatch->context->id,
+			"sync ctx", event->context->id,
+			"ts", event->timestamp, NULL, 0, NULL, 0, 0);
+	}
+#endif
 
 done:
 	if (ret)
@@ -2339,6 +2377,10 @@ long kgsl_ioctl_drawctxt_create(struct kgsl_device_private *dev_priv,
 		result = PTR_ERR(context);
 		goto done;
 	}
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	xlog_fence((char*)__func__, "ctx", context->id,
+		"flags", param->flags, NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 	trace_kgsl_context_create(dev_priv->device, context, param->flags);
 	param->drawctxt_id = context->id;
 done:

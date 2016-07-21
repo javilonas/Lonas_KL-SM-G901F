@@ -18,7 +18,6 @@
 
 enum hdmi_tx_io_type {
 	HDMI_TX_CORE_IO,
-	HDMI_TX_PHY_IO,
 	HDMI_TX_QFPROM_IO,
 	HDMI_TX_MAX_IO
 };
@@ -34,6 +33,7 @@ enum hdmi_tx_power_module_type {
 /* Data filled from device tree */
 struct hdmi_tx_platform_data {
 	bool primary;
+	bool cont_splash_enabled;
 	bool cond_power_on;
 	struct dss_io_data io[HDMI_TX_MAX_IO];
 	struct dss_module_power power_data[HDMI_TX_MAX_PM];
@@ -86,6 +86,7 @@ struct hdmi_tx_ctrl {
 	bool hdcp_feature_on;
 	bool hpd_disabled;
 	bool ds_registered;
+	bool polarity_reset;
 	bool mhl_connect_status;
 	u32 present_hdcp;
 
@@ -98,12 +99,18 @@ struct hdmi_tx_ctrl {
 	void *downstream_data;
 
 	void *feature_data[HDMI_TX_FEAT_MAX];
+
+	void *codec_data;
+	u32 (*play_short_silent_audio) (void *codec_data);
+	bool power_enabled[HDMI_TX_MAX_PM];
 #if defined(CONFIG_SEC_MHL_SUPPORT)
         int is_power_enabled[HDMI_TX_MAX_PM];
 #endif
 
 };
 
+#define IS_CEC_WAKEUP_EN(ctrl) \
+	is_hdmi_cec_wakeup_en((ctrl)->feature_data[HDMI_TX_FEAT_CEC])
 #if defined(CONFIG_SEC_MHL_SUPPORT)
 int hdmi_hpd_status(void);
 #endif

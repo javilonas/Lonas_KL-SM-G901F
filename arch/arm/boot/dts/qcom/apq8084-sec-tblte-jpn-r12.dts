@@ -247,7 +247,7 @@
 
 	gpio@cf00 { /* GPIO 16 */
 		/* FeliCa INTU */
-		qcom,mode = <1>;		/* Digital output */
+		qcom,mode = <0>;		/* Digital Input */
  		qcom,output-type = <0>;		/* CMOS logic */
  		qcom,invert = <0>;		/* Do not invert the output */
  		qcom,vin-sel = <2>;		/* PMA8084 S4 = 1.8 V */

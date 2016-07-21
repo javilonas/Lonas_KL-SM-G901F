@@ -18,6 +18,7 @@
  */
 
 #include <linux/regulator/consumer.h>
+#include "fingerprint.h"
 #include "vfs61xx.h"
 #ifdef CONFIG_OF
 #include <linux/of_gpio.h>
@@ -105,17 +106,9 @@ struct vfsspi_devData {
 	struct workqueue_struct *wq_dbg;
 	struct timer_list dbg_timer;
 	bool tz_mode;
-	unsigned int sensortype;
+	int sensortype;
 	unsigned int expander_call;
 };
-
-enum {
-	SENSOR_FAILED = 0,
-	SENSOR_VIPER,
-	SENSOR_RAPTOR,
-};
-
-char sensor_status[3][7] = {"failed", "viper", "raptor"};
 
 struct vfsspi_devData *g_data;
 
@@ -128,8 +121,6 @@ struct vfsspi_devData *g_data;
 /* The coefficient which is multiplying with value retrieved from the
  * VFSSPI_IOCTL_SET_CLK IOCTL command for getting the final baud rate. */
 #define BAUD_RATE_COEF  1000
-
-#define VFSSPI_DEBUG_TIMER_SEC	(10 * HZ)
 
 #define DRDY_IRQ_ENABLE	1
 #define DRDY_IRQ_DISABLE	0
@@ -1468,14 +1459,31 @@ static ssize_t vfsspi_type_check_show(struct device *dev,
 {
 	struct vfsspi_devData *data = dev_get_drvdata(dev);
 
-	return snprintf(buf, PAGE_SIZE, "%u\n", data->sensortype);
+	return snprintf(buf, PAGE_SIZE, "%d\n", data->sensortype);
+}
+static ssize_t vfsspi_vendor_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%s\n", VENDOR);
+}
+
+static ssize_t vfsspi_name_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%s\n", CHIP_ID);
 }
 
 static DEVICE_ATTR(type_check, S_IRUGO,
 	vfsspi_type_check_show, NULL);
+static DEVICE_ATTR(vendor, S_IRUGO,
+	vfsspi_vendor_show, NULL);
+static DEVICE_ATTR(name, S_IRUGO,
+	vfsspi_name_show, NULL);
 
 static struct device_attribute *fp_attrs[] = {
 	&dev_attr_type_check,
+	&dev_attr_vendor,
+	&dev_attr_name,
 	NULL,
 };
 #endif
@@ -1496,20 +1504,20 @@ static void vfsspi_work_func_debug(struct work_struct *work)
 			__func__, gpio_get_value(g_data->ocp_en),
 			ldo_value, gpio_get_value(g_data->sleepPin),
 			g_data->tz_mode,
-			sensor_status[g_data->sensortype]);
+			sensor_status[g_data->sensortype+1]);
 	else
 		pr_info("%s r ldo: %d,"
 			" sleep: %d, tz: %d, type: %s\n",
-			__func__, ldo_value, 
+			__func__, ldo_value,
 			gpio_get_value(g_data->sleepPin),
 			g_data->tz_mode,
-			sensor_status[g_data->sensortype]);
+			sensor_status[g_data->sensortype+1]);
 }
 
 static void vfsspi_enable_debug_timer(void)
 {
 	mod_timer(&g_data->dbg_timer,
-		round_jiffies_up(jiffies + VFSSPI_DEBUG_TIMER_SEC));
+		round_jiffies_up(jiffies + FPSENSOR_DEBUG_TIMER_SEC));
 }
 
 static void vfsspi_disable_debug_timer(void)
@@ -1522,7 +1530,7 @@ static void vfsspi_timer_func(unsigned long ptr)
 {
 	queue_work(g_data->wq_dbg, &g_data->work_debug);
 	mod_timer(&g_data->dbg_timer,
-		round_jiffies_up(jiffies + VFSSPI_DEBUG_TIMER_SEC));
+		round_jiffies_up(jiffies + FPSENSOR_DEBUG_TIMER_SEC));
 }
 
 #define TEST_DEBUG

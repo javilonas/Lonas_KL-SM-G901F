@@ -238,27 +238,26 @@ static inline void msm_isp_get_timestamp(struct msm_isp_timestamp *time_stamp)
 static inline void msm_isp_get_vt_tstamp(struct vfe_device *vfe_dev,
 	struct msm_isp_timestamp *time_stamp)
 {
-	uint32_t avtimer_msw_1st = 0, avtimer_lsw = 0;
-	uint32_t avtimer_msw_2nd = 0;
-	uint8_t iter = 0;
-	if (!vfe_dev->p_avtimer_msw || !vfe_dev->p_avtimer_lsw) {
-		pr_err("%s: ioremap failed\n", __func__);
-		return;
-	}
-	do {
-		avtimer_msw_1st = msm_camera_io_r(vfe_dev->p_avtimer_msw);
-		avtimer_lsw = msm_camera_io_r(vfe_dev->p_avtimer_lsw);
-		avtimer_msw_2nd = msm_camera_io_r(vfe_dev->p_avtimer_msw);
-	} while ((avtimer_msw_1st != avtimer_msw_2nd)
-		&& (iter++ < AVTIMER_ITERATION_CTR));
-	if (iter >= AVTIMER_ITERATION_CTR) {
-		pr_err("%s: AVTimer MSW TS did not converge !!!\n", __func__);
-		return;
-	}
-	time_stamp->vt_time.tv_sec = avtimer_msw_1st;
-	time_stamp->vt_time.tv_usec = avtimer_lsw;
+    uint32_t avtimer_msw_1st = 0, avtimer_lsw = 0;
+    uint32_t avtimer_msw_2nd = 0;
+    uint8_t iter = 0;
+    if (!vfe_dev->p_avtimer_msw || !vfe_dev->p_avtimer_lsw) {
+	pr_err("%s: ioremap failed\n", __func__);
+	return;
+    }
+    do {
+	avtimer_msw_1st = msm_camera_io_r(vfe_dev->p_avtimer_msw);
+	avtimer_lsw = msm_camera_io_r(vfe_dev->p_avtimer_lsw);
+	avtimer_msw_2nd = msm_camera_io_r(vfe_dev->p_avtimer_msw);
+    } while ((avtimer_msw_1st != avtimer_msw_2nd)
+	    && (iter++ < AVTIMER_ITERATION_CTR));
+    if (iter >= AVTIMER_ITERATION_CTR) {
+	pr_err("%s: AVTimer MSW TS did not converge !!!\n", __func__);
+	return;
+    }
+    time_stamp->vt_time.tv_sec = avtimer_msw_1st;
+    time_stamp->vt_time.tv_usec = avtimer_lsw;
 }
-
 
 int msm_isp_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
 	struct v4l2_event_subscription *sub)
@@ -682,7 +681,6 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 	}
 	case VFE_CFG_MASK: {
 		uint32_t temp;
-
 	  if ((UINT_MAX - sizeof(temp) <
 			reg_cfg_cmd->u.mask_info.reg_offset) ||
 			(resource_size(vfe_dev->vfe_mem) <

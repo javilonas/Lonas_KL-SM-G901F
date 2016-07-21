@@ -279,6 +279,15 @@ static inline void kgsl_drm_exit(void)
 }
 #endif
 
+#if defined (CONFIG_FB_MSM_MDSS_FENCE_DBG)
+void xlog_fence(char *name, char *data0_name, u32 data0,
+				char *data1_name, u32 data1,
+				char *data2_name, u32 data2,
+				char *data3_name, u32 data3,
+				char *data4_name, u32 data4, u32 data5);
+void xlog_fence_dump(void);
+#endif
+
 static inline int kgsl_gpuaddr_in_memdesc(const struct kgsl_memdesc *memdesc,
 				unsigned int gpuaddr, size_t size)
 {

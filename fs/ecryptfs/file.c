@@ -263,7 +263,7 @@ out:
 		if (!(crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE) &&
 				((S_ISDIR(parent_inode->i_mode)) &&
 						(parent_crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE))) {
-			rc = ecryptfs_sdp_set_sensitive(dentry);
+			rc = ecryptfs_sdp_set_sensitive(parent_crypt_stat->engine_id, dentry);
 		}
 	}
 #endif
@@ -359,12 +359,18 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
         if (S_ISREG(ecryptfs_dentry->d_inode->i_mode)) {
             if(get_sdp_sysfs_key_dump()) {
                 printk("FEK[%s] : ", ecryptfs_dentry->d_name.name);
-                dek_dump(crypt_stat->key, 32);
+                key_dump(crypt_stat->key, 32);
             }
 	}
 #endif
-
-		if (ecryptfs_is_persona_locked(crypt_stat->userid)) {
+		/*
+		 * Need to update sensitive mapping on file open
+		 */
+		if (S_ISREG(ecryptfs_dentry->d_inode->i_mode)) {
+			ecryptfs_set_mapping_sensitive(inode, mount_crypt_stat->userid, TO_SENSITIVE);
+		}
+		
+		if (ecryptfs_is_sdp_locked(crypt_stat->engine_id)) {
 			ecryptfs_printk(KERN_INFO, "ecryptfs_open: persona is locked, rc=%d\n", rc);
 		} else {
 			int dek_type = crypt_stat->sdp_dek.type;
@@ -375,19 +381,12 @@ static int ecryptfs_open(struct inode *inode, struct file *file)
 				rc = ecryptfs_sdp_convert_dek(ecryptfs_dentry);
 				ecryptfs_printk(KERN_DEBUG, "conversion ready, rc=%d\n", rc);
 				rc = 0; // TODO: Do we need to return error if conversion fails?
-				/*
-				if(!(file->f_flags & O_SDP)){
-					ecryptfs_printk(KERN_WARNING, "Busy sensitive file (try again later)\n");
-					rc = -EBUSY;
-					goto out_put;
-				}
-				*/
 			}
 		}
 	}
 #if ECRYPTFS_DEK_DEBUG
 	else {
-		ecryptfs_printk(KERN_INFO, "ecryptfs_open: dek_file_type is protected");
+		ecryptfs_printk(KERN_INFO, "ecryptfs_open: dek_file_type is protected\n");
 	}
 #endif
 #endif
@@ -418,48 +417,16 @@ static int ecryptfs_flush(struct file *file, fl_owner_t td)
 
 static int ecryptfs_release(struct inode *inode, struct file *file)
 {
-#ifdef CONFIG_SDP
 	struct ecryptfs_crypt_stat *crypt_stat;
-
 	crypt_stat = &ecryptfs_inode_to_private(inode)->crypt_stat;
 
-	if(crypt_stat->flags & ECRYPTFS_DEK_IS_SENSITIVE) {
-#if 0
-#ifdef SYNC_ONLY_CURRENT_SB
-		struct super_block *sb = inode->i_sb;
-
-		sync_inodes_sb(sb);
-		writeback_inodes_sb(sb, WB_REASON_SYNC);
-#else
-		sys_sync();
+#ifdef CONFIG_SDP
+	mutex_lock(&crypt_stat->cs_mutex);
 #endif
-		DEK_LOGD("%s() sensitive inode being closed. [ino:%lu, state:%lu ref_count:%d efs_flag:0x%0.8x]\n",
-				__func__, inode->i_ino,  inode->i_state, atomic_read(&inode->i_count),
-				crypt_stat->flags);
-
-		spin_lock(&inode->i_lock);
-
-		if ((inode->i_state & (I_FREEING|I_WILL_FREE|I_NEW)) ||
-				(inode->i_mapping->nrpages == 0)) {
-			spin_unlock(&inode->i_lock);
-		} else {
-			printk("freeing sensitive inode\n");
-			invalidate_mapping_pages(inode->i_mapping, 0, -1);
-		}
-		spin_unlock(&inode->i_lock);
-#else
-		DEK_LOGD("%s() sensitive inode being closed. [ino:%lu, state:%lu ref_count:%d]\n",
-				__func__, inode->i_ino,  inode->i_state, atomic_read(&inode->i_count));
-
-		ecryptfs_clean_sdp_dek(crypt_stat);
-
-		if(ecryptfs_is_persona_locked(crypt_stat->userid))
-			ecryptfs_mm_drop_cache(crypt_stat->userid);
-	}
-#endif
-#endif
-
 	ecryptfs_put_lower_file(inode);
+#ifdef CONFIG_SDP
+	mutex_unlock(&crypt_stat->cs_mutex);
+#endif
 	kmem_cache_free(ecryptfs_file_info_cache,
 			ecryptfs_file_to_private(file));
 	return 0;
@@ -534,12 +501,12 @@ ecryptfs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 #ifdef CONFIG_SDP
 	rc = ecryptfs_do_sdp_ioctl(file, cmd, arg);
-	if (rc == 0) {
+	if (rc != EOPNOTSUPP)
 		return rc;
-	}
 #else
 	printk("%s CONFIG_SDP not enabled \n", __func__);
 #endif
+
 	if (ecryptfs_file_to_private(file))
 		lower_file = ecryptfs_file_to_lower(file);
 	if (lower_file && lower_file->f_op && lower_file->f_op->unlocked_ioctl)
@@ -557,6 +524,14 @@ ecryptfs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #ifdef CONFIG_SDP
 	rc = ecryptfs_do_sdp_ioctl(file, cmd, arg);
 	if (rc == 0)
+		return rc;
+#else
+	printk("%s CONFIG_SDP not enabled \n", __func__);
+#endif
+
+#ifdef CONFIG_SDP
+	rc = ecryptfs_do_sdp_ioctl(file, cmd, arg);
+	if (rc != EOPNOTSUPP)
 		return rc;
 #else
 	printk("%s CONFIG_SDP not enabled \n", __func__);
