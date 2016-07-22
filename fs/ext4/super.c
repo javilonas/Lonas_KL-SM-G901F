@@ -457,12 +457,14 @@ void ext4_error_inode(struct inode *inode, const char *function,
 	vaf.fmt = fmt;
 	vaf.va = &args;
 	if (block)
-		printk(KERN_CRIT "EXT4-fs error (device %s): %s:%d: "
+		printk_ratelimited(
+			KERN_CRIT "EXT4-fs error (device %s): %s:%d: "
 		       "inode #%lu: block %llu: comm %s: %pV\n",
 		       inode->i_sb->s_id, function, line, inode->i_ino,
 		       block, current->comm, &vaf);
 	else
-		printk(KERN_CRIT "EXT4-fs error (device %s): %s:%d: "
+		printk_ratelimited(
+			KERN_CRIT "EXT4-fs error (device %s): %s:%d: "
 		       "inode #%lu: comm %s: %pV\n",
 		       inode->i_sb->s_id, function, line, inode->i_ino,
 		       current->comm, &vaf);
@@ -1527,8 +1529,12 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
 		return -1;
 	if (args->from && (m->flags & MOPT_GTE0) && (arg < 0))
 		return -1;
-	if (m->flags & MOPT_EXPLICIT)
-		set_opt2(sb, EXPLICIT_DELALLOC);
+	if (m->flags & MOPT_EXPLICIT) {
+		if (m->mount_opt & EXT4_MOUNT_DELALLOC) {
+			set_opt2(sb, EXPLICIT_DELALLOC);
+		} else
+			return -1;
+	}
 	if (m->flags & MOPT_CLEAR_ERR)
 		clear_opt(sb, ERRORS_MASK);
 	if (token == Opt_noquota && sb_any_quota_loaded(sb)) {
@@ -4686,6 +4692,8 @@ static int ext4_remount(struct super_block *sb, int *flags, char *data)
 	int i, j;
 #endif
 	char *orig_data = kstrdup(data, GFP_KERNEL);
+
+	sync_filesystem(sb);
 
 	/* Store the original options */
 	old_sb_flags = sb->s_flags;

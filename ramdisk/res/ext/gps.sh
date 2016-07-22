@@ -16,8 +16,21 @@
 # limitations under the License.
 #
 
+LOG_FILE=/data/gps.log
+
 PATH=/sbin:/system/sbin:/system/bin:/system/xbin
 export PATH
+
+if [ -e $LOG_FILE ]; then
+	rm $LOG_FILE
+fi
+
+if [ ! -f $LOG_FILE ]; then
+	touch $LOG_FILE
+fi
+
+echo "" | tee -a $LOG_FILE
+echo "$( date +"%m-%d-%Y %H:%M:%S" ) Activating gps.." | tee -a $LOG_FILE
 
 # Google play services wakelock fix
 sleep 5
@@ -289,3 +302,5 @@ su -c pm disable com.google.android.gsf/.checkin.CheckinService
 su -c pm disable com.google.android.gsf/.checkin.EventLogService
 su -c pm disable com.google.android.gsf/.update.SystemUpdateService
 
+echo "" | tee -a $LOG_FILE
+echo "$( date +"%m-%d-%Y %H:%M:%S" ) gps activated.." | tee -a $LOG_FILE

@@ -16,14 +16,30 @@
 # limitations under the License.
 #
 
+LOG_FILE=/data/killing.log
+
 PATH=/sbin:/system/sbin:/system/bin:/system/xbin
 export PATH
 
-echo "............Closing APPS before init";
+if [ -e $LOG_FILE ]; then
+	rm $LOG_FILE
+fi
+
+if [ ! -f $LOG_FILE ]; then
+	touch $LOG_FILE
+fi
+
+echo "" | tee -a $LOG_FILE
+echo "$( date +"%m-%d-%Y %H:%M:%S" ) Activating killing.." | tee -a $LOG_FILE
 
 killall -q kswapd0
 sleep 71
 am kill-all
+killall -9 com.google.android.gms
+killall -9 com.google.android.gms.persistent
+killall -9 com.google.process.gapps
+killall -9 com.google.android.gsf
+killall -9 com.google.android.gsf.persistent
 killall -q com.android.MtpApplication
 killall -q com.sec.android.inputmethod
 killall -q com.sec.android.provider.logsprovider
@@ -143,4 +159,6 @@ if [ "`pgrep media`" ] && [ "`pgrep mediaserver`" ]; then
 	killall -9 mediaserver
 fi
 
-echo "............done";
+
+echo "" | tee -a $LOG_FILE
+echo "$( date +"%m-%d-%Y %H:%M:%S" ) killing activated.." | tee -a $LOG_FILE

@@ -12,6 +12,7 @@
  */
 
 #include <linux/capability.h>
+#include <linux/dcache.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -313,9 +314,12 @@ int security_sb_pivotroot(struct path *old_path, struct path *new_path)
 }
 
 int security_sb_set_mnt_opts(struct super_block *sb,
-				struct security_mnt_opts *opts)
+				struct security_mnt_opts *opts,
+				unsigned long kern_flags,
+				unsigned long *set_kern_flags)
 {
-	return security_ops->sb_set_mnt_opts(sb, opts);
+	return security_ops->sb_set_mnt_opts(sb, opts, kern_flags,
+						set_kern_flags);
 }
 EXPORT_SYMBOL(security_sb_set_mnt_opts);
 
@@ -343,6 +347,15 @@ void security_inode_free(struct inode *inode)
 	integrity_inode_free(inode);
 	security_ops->inode_free_security(inode);
 }
+
+int security_dentry_init_security(struct dentry *dentry, int mode,
+					struct qstr *name, void **ctx,
+					u32 *ctxlen)
+{
+	return security_ops->dentry_init_security(dentry, mode, name,
+							ctx, ctxlen);
+}
+EXPORT_SYMBOL(security_dentry_init_security);
 
 int security_inode_init_security(struct inode *inode, struct inode *dir,
 				 const struct qstr *qstr,
@@ -486,6 +499,16 @@ int security_inode_create(struct inode *dir, struct dentry *dentry, umode_t mode
 	return security_ops->inode_create(dir, dentry, mode);
 }
 EXPORT_SYMBOL_GPL(security_inode_create);
+
+int security_inode_post_create(struct inode *dir, struct dentry *dentry,
+			       umode_t mode)
+{
+	if (unlikely(IS_PRIVATE(dir)))
+		return 0;
+	if (security_ops->inode_post_create == NULL)
+		return 0;
+	return security_ops->inode_post_create(dir, dentry, mode);
+}
 
 int security_inode_link(struct dentry *old_dentry, struct inode *dir,
 			 struct dentry *new_dentry)
@@ -667,6 +690,7 @@ int security_inode_listsecurity(struct inode *inode, char *buffer, size_t buffer
 		return 0;
 	return security_ops->inode_listsecurity(inode, buffer, buffer_size);
 }
+EXPORT_SYMBOL(security_inode_listsecurity);
 
 void security_inode_getsecid(const struct inode *inode, u32 *secid)
 {
@@ -790,6 +814,22 @@ int security_file_open(struct file *file, const struct cred *cred)
 		return ret;
 
 	return fsnotify_perm(file, MAY_OPEN);
+}
+
+int security_file_close(struct file *file)
+{
+	if (security_ops->file_close)
+		return security_ops->file_close(file);
+
+	return 0;
+}
+
+bool security_allow_merge_bio(struct bio *bio1, struct bio *bio2)
+{
+	if (security_ops->allow_merge_bio)
+		return security_ops->allow_merge_bio(bio1, bio2);
+
+	return true;
 }
 
 int security_task_create(unsigned long clone_flags)
@@ -1066,6 +1106,12 @@ int security_netlink_send(struct sock *sk, struct sk_buff *skb)
 {
 	return security_ops->netlink_send(sk, skb);
 }
+
+int security_ismaclabel(const char *name)
+{
+	return security_ops->ismaclabel(name);
+}
+EXPORT_SYMBOL(security_ismaclabel);
 
 int security_secid_to_secctx(u32 secid, char **secdata, u32 *seclen)
 {

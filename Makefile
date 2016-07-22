@@ -387,6 +387,7 @@ KBUILD_CFLAGS   := -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-sequence-point \
 		   -Wno-switch-bool \
 		   -fno-delete-null-pointer-checks \
+		   -Wno-cpp -Wno-logical-not-parentheses \
 		   -std=gnu90 $(GRAPHITE_FLAGS) $(KERNELFLAGS)
 
 # L1/L2 cache size parameters

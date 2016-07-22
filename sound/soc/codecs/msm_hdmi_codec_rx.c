@@ -96,13 +96,13 @@ static int msm_hdmi_audio_codec_rx_dai_startup(
 	if (IS_ERR_VALUE(msm_hdmi_audio_codec_return_value)) {
 		dev_err(dai->dev,
 			"%s() HDMI core is not ready (ret val = %d)\n",
-						__func__, msm_hdmi_audio_codec_return_value);
+			__func__, msm_hdmi_audio_codec_return_value);
 		ret = msm_hdmi_audio_codec_return_value;
 	} else if (!msm_hdmi_audio_codec_return_value) {
-				dev_err(dai->dev,
-				"%s() HDMI cable is not connected (ret val = %d)\n",
-				__func__, msm_hdmi_audio_codec_return_value);
-			ret = -EAGAIN;
+		dev_err(dai->dev,
+			"%s() HDMI cable is not connected (ret val = %d)\n",
+			__func__, msm_hdmi_audio_codec_return_value);
+		ret = -ENODEV;
 	}
 
 	return ret;
@@ -128,10 +128,10 @@ static int msm_hdmi_audio_codec_rx_dai_hw_params(
 			__func__, msm_hdmi_audio_codec_return_value);
 		return msm_hdmi_audio_codec_return_value;
 	} else if (!msm_hdmi_audio_codec_return_value) {
-				dev_err(dai->dev,
-				"%s() HDMI cable is not connected (ret val = %d)\n",
-				__func__, msm_hdmi_audio_codec_return_value);
-		return -EAGAIN;
+		dev_err(dai->dev,
+			"%s() HDMI cable is not connected (ret val = %d)\n",
+			__func__, msm_hdmi_audio_codec_return_value);
+		return -ENODEV;
 	}
 
 	/*refer to HDMI spec CEA-861-E: Table 28 Audio InfoFrame Data Byte 4*/

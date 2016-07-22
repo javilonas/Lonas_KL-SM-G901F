@@ -15,19 +15,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# libera pagecache cada 3 horas si esta está por debajo de 20360 kbytes
-# 
+# Kernel panic setup
+#
 
-/sbin/busybox renice 19 `pidof libera_ram.sh`
-FREE=`free -m | grep -i mem | awk '{print $4}'`
+LOG_FILE=/data/panic.log
 
-while [ 1 ];
-do
-		if [ $FREE -lt 20360 ]; then
-				sync
-				echo "3" > /proc/sys/vm/drop_caches
-				sleep 1
-				echo "0" > /proc/sys/vm/drop_caches
-		fi
-sleep 10800
-done
+PATH=/sbin:/system/sbin:/system/bin:/system/xbin
+export PATH
+
+if [ -e $LOG_FILE ]; then
+	rm $LOG_FILE
+fi
+
+if [ ! -f $LOG_FILE ]; then
+	touch $LOG_FILE
+fi
+
+echo "" | tee -a $LOG_FILE
+echo "$( date +"%m-%d-%Y %H:%M:%S" ) Activating panic.." | tee -a $LOG_FILE
+
+if [ -e /proc/sys/kernel/panic_on_oops ]; then
+	echo "0" > /proc/sys/kernel/panic_on_oops
+fi
+if [ -e /proc/sys/kernel/panic ]; then
+	echo "0" > /proc/sys/kernel/panic
+fi
+if [ -e /proc/sys/vm/panic_on_oom ]; then
+	echo "0" > /proc/sys/vm/panic_on_oom
+fi
+
+echo "" | tee -a $LOG_FILE
+echo "$( date +"%m-%d-%Y %H:%M:%S" ) panic activated.." | tee -a $LOG_FILE
