@@ -951,6 +951,10 @@ static void ispif_process_irq(struct ispif_device *ispif,
 	if (out[vfe_id].ispifIrqStatus0 &
 			ISPIF_IRQ_STATUS_PIX_SOF_MASK) {
 		ispif->sof_count[vfe_id].sof_cnt[PIX0]++;
+		if ((ispif->sof_count[vfe_id].sof_cnt[PIX0] % 30 == 0) ||
+                    (ispif->sof_count[vfe_id].sof_cnt[PIX0] == 1))
+                    pr_err("[frame_dbg] vfe%d frame idx [%d]\n",
+                        vfe_id, ispif->sof_count[vfe_id].sof_cnt[PIX0]);
 	}
 	if (out[vfe_id].ispifIrqStatus0 &
 			ISPIF_IRQ_STATUS_RDI0_SOF_MASK) {

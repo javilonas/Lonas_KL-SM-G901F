@@ -7,7 +7,7 @@
  * reduction on the real swap device and, in the case of a slow swap
  * device, can also improve workload performance.
  *
- * Copyright (C) 2012  Seth Jennings <sjenning@linux.vnet.ibm.com>
+ * Copyright (C) 2012  Seth Jennings <sjennings@variantweb.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -79,7 +79,7 @@ static u64 zswap_duplicate_entry;
 **********************************/
 /* Enable/disable zswap (enabled by default, fixed at boot for now) */
 static bool zswap_enabled = 1;
-module_param_named(enabled, zswap_enabled, bool, 0);
+module_param_named(enabled, zswap_enabled, bool, 0444);
 
 /* Compressor to be used by zswap (fixed at boot for now) */
 #ifdef CONFIG_CRYPTO_LZ4
@@ -88,7 +88,7 @@ module_param_named(enabled, zswap_enabled, bool, 0);
 #define ZSWAP_COMPRESSOR_DEFAULT "lzo"
 #endif
 static char *zswap_compressor = ZSWAP_COMPRESSOR_DEFAULT;
-module_param_named(compressor, zswap_compressor, charp, 0);
+module_param_named(compressor, zswap_compressor, charp, 0444);
 
 /* The maximum percentage of memory that the compressed pool can occupy */
 static unsigned int zswap_max_pool_percent = 20;
@@ -164,11 +164,10 @@ static int __init zswap_comp_init(void)
 	return 0;
 }
 
-static void zswap_comp_exit(void)
+static void __init zswap_comp_exit(void)
 {
 	/* free percpu transforms */
-	if (zswap_comp_pcpu_tfms)
-		free_percpu(zswap_comp_pcpu_tfms);
+	free_percpu(zswap_comp_pcpu_tfms);
 }
 
 /*********************************
@@ -185,7 +184,7 @@ static void zswap_comp_exit(void)
  * lru - links the entry into the lru list for the appropriate swap type
  * refcount - the number of outstanding reference to the entry. This is needed
  *            to protect against premature freeing of the entry by code
- *            concurent calls to load, invalidate, and writeback.  The lock
+ *            concurrent calls to load, invalidate, and writeback.  The lock
  *            for the zswap_tree structure that contains the entry must
  *            be held while changing the refcount.  Since the lock must
  *            be held, there is no reason to also make refcount atomic.
@@ -194,7 +193,7 @@ static void zswap_comp_exit(void)
  * offset - the swap offset for the entry.  Index into the red-black tree.
  * handle - zsmalloc allocation handle that stores the compressed page data
  * length - the length in bytes of the compressed page data.  Needed during
- *           decompression
+ *            decompression
  */
 struct zswap_entry {
 	struct rb_node rbnode;
@@ -227,7 +226,7 @@ static struct zswap_tree *zswap_trees[MAX_SWAPFILES];
 #define ZSWAP_KMEM_CACHE_NAME "zswap_entry_cache"
 static struct kmem_cache *zswap_entry_cache;
 
-static inline int zswap_entry_cache_create(void)
+static inline int __init zswap_entry_cache_create(void)
 {
 	zswap_entry_cache =
 		kmem_cache_create(ZSWAP_KMEM_CACHE_NAME,
@@ -235,7 +234,7 @@ static inline int zswap_entry_cache_create(void)
 	return (zswap_entry_cache == NULL);
 }
 
-static inline void zswap_entry_cache_destory(void)
+static inline void __init zswap_entry_cache_destroy(void)
 {
 	kmem_cache_destroy(zswap_entry_cache);
 }
@@ -332,7 +331,7 @@ static int __zswap_cpu_notifier(unsigned long action, unsigned long cpu)
 			return NOTIFY_BAD;
 		}
 		*per_cpu_ptr(zswap_comp_pcpu_tfms, cpu) = tfm;
-		dst = kmalloc(PAGE_SIZE * 2, GFP_KERNEL);
+		dst = kmalloc_node(PAGE_SIZE * 2, GFP_KERNEL, cpu_to_node(cpu));
 		if (!dst) {
 			pr_err("can't allocate compressor buffer\n");
 			crypto_free_comp(tfm);
@@ -371,7 +370,7 @@ static struct notifier_block zswap_cpu_notifier_block = {
 	.notifier_call = zswap_cpu_notifier
 };
 
-static int zswap_cpu_init(void)
+static int __init zswap_cpu_init(void)
 {
 	unsigned long cpu;
 
@@ -494,7 +493,7 @@ static int zswap_get_swap_cache_page(swp_entry_t entry,
 				struct page **retpage)
 {
 	struct page *found_page, *new_page = NULL;
-	struct address_space *swapper_space = &swapper_spaces[swp_type(entry)];
+	struct address_space *swapper_space = swap_address_space(entry);
 	int err;
 
 	*retpage = NULL;
@@ -620,6 +619,9 @@ static int zswap_writeback_entry(struct zswap_tree *tree,
 		/* page is up to date */
 		SetPageUptodate(page);
 	}
+
+	/* move it to the tail of the inactive list after end_writeback */
+	SetPageReclaim(page);
 
 	/* start writeback */
 	SetPageReclaim(page);
@@ -1170,7 +1172,7 @@ compfail:
 tmppoolfail:
 	zswap_page_pool_destroy();
 pagepoolfail:
-	zswap_entry_cache_destory();
+	zswap_entry_cache_destroy();
 error:
 	return -ENOMEM;
 }
@@ -1178,5 +1180,5 @@ error:
 late_initcall(init_zswap);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Seth Jennings <sjenning@linux.vnet.ibm.com>");
+MODULE_AUTHOR("Seth Jennings <sjennings@variantweb.net>");
 MODULE_DESCRIPTION("Compressed cache for swap pages");

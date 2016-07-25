@@ -424,6 +424,33 @@ static void kgsl_mem_entry_detach_process(struct kgsl_mem_entry *entry)
 }
 
 /**
+ * kgsl_context_dump() - dump information about a draw context
+ * @device: KGSL device that owns the context
+ * @context: KGSL context to dump information about
+ *
+ * Dump specific information about the context to the kernel log.  Used for
+ * fence timeout callbacks
+ */
+void kgsl_context_dump(struct kgsl_context *context)
+{
+	struct kgsl_device *device;
+
+	if (_kgsl_context_get(context) == 0)
+		return;
+
+	device = context->device;
+
+	if (kgsl_context_detached(context)) {
+		dev_err(device->dev, "  context[%d]: context detached\n",
+			context->id);
+	} else if (device->ftbl->drawctxt_dump != NULL)
+		device->ftbl->drawctxt_dump(device, context);
+
+	kgsl_context_put(context);
+}
+EXPORT_SYMBOL(kgsl_context_dump);
+
+/**
  * kgsl_context_init() - helper to initialize kgsl_context members
  * @dev_priv: the owner of the context
  * @context: the newly created context struct, should be allocated by
@@ -542,6 +569,11 @@ kgsl_context_destroy(struct kref *kref)
 	struct kgsl_context *context = container_of(kref, struct kgsl_context,
 						    refcount);
 	struct kgsl_device *device = context->device;
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	xlog_fence((char*)__func__, (char*)device->name, 0,
+		"ctx", context->id,
+		NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 
 	trace_kgsl_context_destroy(device, context);
 
@@ -1481,21 +1513,10 @@ struct kgsl_cmdbatch_sync_event {
 	struct kref refcount;
 };
 
-static void _kgsl_cmdbatch_timer(unsigned long data)
+void kgsl_dump_syncpoints(struct kgsl_device *device,
+	struct kgsl_cmdbatch *cmdbatch)
 {
-	struct kgsl_cmdbatch *cmdbatch = (struct kgsl_cmdbatch *) data;
 	struct kgsl_cmdbatch_sync_event *event;
-
-	if (cmdbatch == NULL || cmdbatch->context == NULL)
-		return;
-
-	spin_lock(&cmdbatch->lock);
-	if (list_empty(&cmdbatch->synclist))
-		goto done;
-
-	pr_err("kgsl: possible gpu syncpoint deadlock for context %d timestamp %d\n",
-		cmdbatch->context->id, cmdbatch->timestamp);
-	pr_err(" Active sync points:\n");
 
 	/* Print all the pending sync objects */
 	list_for_each_entry(event, &cmdbatch->synclist, node) {
@@ -1508,19 +1529,44 @@ static void _kgsl_cmdbatch_timer(unsigned long data)
 				event->context, KGSL_TIMESTAMP_RETIRED,
 				&retired);
 
-			pr_err("  [timestamp] context %d timestamp %d (retired %d)\n",
+			dev_err(device->dev,
+				"  [timestamp] context %d timestamp %d (retired %d)\n",
 				event->context->id, event->timestamp,
 				retired);
 			break;
 		}
 		case KGSL_CMD_SYNCPOINT_TYPE_FENCE:
-			pr_err("  fence: [%p] %s\n", event->handle,
-				(event->handle && event->handle->fence)
-					? event->handle->fence->name : "NULL");
+			if (event->handle && event->handle->fence)
+				dev_err(device->dev, "  fence: [%p] %s\n",
+ 					event->handle->fence,
+ 					event->handle->fence->name);
+ 			else
+				dev_err(device->dev, "  fence: invalid\n");
 			break;
 		}
 	}
+}
 
+static void _kgsl_cmdbatch_timer(unsigned long data)
+{
+	struct kgsl_device *device;
+	struct kgsl_cmdbatch *cmdbatch = (struct kgsl_cmdbatch *) data;
+
+	if (cmdbatch == NULL || cmdbatch->context == NULL)
+		return;
+
+	spin_lock(&cmdbatch->lock);
+	if (list_empty(&cmdbatch->synclist))
+		goto done;
+
+	device = cmdbatch->context->device;
+
+	dev_err(device->dev,
+		"kgsl: possible gpu syncpoint deadlock for context %d timestamp %d\n",
+		cmdbatch->context->id, cmdbatch->timestamp);
+	dev_err(device->dev, " Active sync points:\n");
+
+	kgsl_dump_syncpoints(device, cmdbatch);
 done:
 	spin_unlock(&cmdbatch->lock);
 }
@@ -1626,7 +1672,12 @@ static void kgsl_cmdbatch_sync_func(struct kgsl_device *device,
 		struct kgsl_context *context, void *priv, int result)
 {
 	struct kgsl_cmdbatch_sync_event *event = priv;
-
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	xlog_fence((char*)__func__, "ctx", event->cmdbatch->context->id,
+		"sync_ctx", event->context->id,
+		"ts", event->timestamp,
+		NULL, 0, NULL, 0, 0);
+#endif
 	kgsl_cmdbatch_sync_expire(device, event);
 	kgsl_context_put(event->context);
 	/* Put events that have signaled */
@@ -1704,6 +1755,15 @@ EXPORT_SYMBOL(kgsl_cmdbatch_destroy);
 static void kgsl_cmdbatch_sync_fence_func(void *priv)
 {
 	struct kgsl_cmdbatch_sync_event *event = priv;
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	char *name="unknown";
+	if(event->handle && event->handle->fence)
+		name = event->handle->fence->name;
+
+	xlog_fence((char*)__func__, "syncpoint_fence_expirectx", event->cmdbatch->context->id,
+		strncat("name=",name,strlen(name)), 0,
+		NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 
 	kgsl_cmdbatch_sync_expire(event->device, event);
 	/* Put events that have signaled */
@@ -1779,6 +1839,13 @@ static int kgsl_cmdbatch_add_sync_fence(struct kgsl_device *device,
 
 		/* Event no longer needed by this function */
 		kgsl_cmdbatch_sync_event_put(event);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+		if(ret==0) {
+			xlog_fence((char*)__func__, "fence_expire ctx", cmdbatch->context->id,
+				"signaled", 0,
+				NULL, 0, NULL, 0, NULL, 0, 0);
+		}
+#endif
 
 		return ret;
 	}
@@ -1788,6 +1855,11 @@ static int kgsl_cmdbatch_add_sync_fence(struct kgsl_device *device,
 	 * callback and handle to cancel event has been set.
 	 */
 	kgsl_cmdbatch_sync_event_put(event);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	xlog_fence((char*)__func__, "syncpoint_fence ctx", cmdbatch->context->id,
+		strncat("name=",event->handle->fence->name,strlen(event->handle->fence->name)), 0,
+		NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 
 	return 0;
 }
@@ -1871,6 +1943,13 @@ static int kgsl_cmdbatch_add_sync_timestamp(struct kgsl_device *device,
 		kgsl_cmdbatch_put(cmdbatch);
 		kfree(event);
 	}
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	else {
+		xlog_fence((char*)__func__, "ctx", cmdbatch->context->id,
+			"sync ctx", event->context->id,
+			"ts", event->timestamp, NULL, 0, NULL, 0, 0);
+	}
+#endif
 
 done:
 	if (ret)
@@ -2339,6 +2418,10 @@ long kgsl_ioctl_drawctxt_create(struct kgsl_device_private *dev_priv,
 		result = PTR_ERR(context);
 		goto done;
 	}
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	xlog_fence((char*)__func__, "ctx", context->id,
+		"flags", param->flags, NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 	trace_kgsl_context_create(dev_priv->device, context, param->flags);
 	param->drawctxt_id = context->id;
 done:

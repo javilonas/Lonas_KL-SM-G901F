@@ -1427,8 +1427,8 @@ int mdss_samsung_brightness_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 		return false;
 	}
 
-	if(alpm_status_func(CHECK_PREVIOUS_STATUS)){
-		pr_info("[ALPM_DEBUG] ALPM is on. do not set brightness..\n");
+	if (alpm_status_func(CHECK_PREVIOUS_STATUS)) {
+		pr_info("[ALPM_DEBUG] ALPM is on. do not set brightness.. (%d)\n", level);
 		return false;
 	}
 
@@ -3001,14 +3001,15 @@ static ssize_t mdss_samsung_auto_brightness_store(struct device *dev,
 		pr_info("%s: Invalid argument!!", __func__);
 
 	pr_info("%s (%d) \n", __func__, vdd->auto_brightness);
-	if(!alpm_status_func(CHECK_PREVIOUS_STATUS)){
-	mutex_lock(&vdd->mfd_dsi[DISPLAY_1]->bl_lock);
-	pdata->set_backlight(pdata, vdd->bl_level);
-	mutex_unlock(&vdd->mfd_dsi[DISPLAY_1]->bl_lock);
 
-	if (vdd->support_mdnie_lite)
-		update_dsi_tcon_mdnie_register(vdd);
-	}else
+	if (!alpm_status_func(CHECK_PREVIOUS_STATUS)) {
+		mutex_lock(&vdd->mfd_dsi[DISPLAY_1]->bl_lock);
+		pdata->set_backlight(pdata, vdd->bl_level);
+		mutex_unlock(&vdd->mfd_dsi[DISPLAY_1]->bl_lock);
+
+		if (vdd->support_mdnie_lite)
+			update_dsi_tcon_mdnie_register(vdd);
+	} else
 		pr_err("[ALPM_DEBUG]  %s : ALPM is on. do not set brightness and mdnie..  \n", __func__);
 
 	return size;
@@ -3178,6 +3179,7 @@ static ssize_t mdss_samsung_alpm_store(struct device *dev,
 	struct mdss_dsi_ctrl_pdata *ctrl;
 	struct mdss_panel_data *pdata;
 	struct mdss_panel_info *pinfo;
+	static int backup_bl_level;
 
 	pdata = &vdd->ctrl_dsi[DISPLAY_1]->panel_data;
 	pinfo = &pdata->panel_info;
@@ -3220,6 +3222,15 @@ static ssize_t mdss_samsung_alpm_store(struct device *dev,
 		if (pinfo->panel_state) {
 			if (!alpm_status_func(CHECK_PREVIOUS_STATUS)\
 					&& alpm_status_func(CHECK_CURRENT_STATUS)) {
+				/* Set min brightness to prevent panel malfunction with ALPM */
+				pr_info("[ALPM_DEBUG] Set Min Birghtness \n");
+				mutex_lock(&vdd->mfd_dsi[DISPLAY_1]->bl_lock);
+
+				if (vdd->bl_level)
+					backup_bl_level = vdd->bl_level;
+
+				pdata->set_backlight(pdata, ALPM_BRIGHTNESS);
+				mutex_unlock(&vdd->mfd_dsi[DISPLAY_1]->bl_lock);
 				/* Turn On ALPM Mode */
 				mdss_samsung_send_cmd(ctrl, PANEL_ALPM_ON);
 				msleep(20); /* wait 1 frame(more than 16ms) */
@@ -3237,7 +3248,11 @@ static ssize_t mdss_samsung_alpm_store(struct device *dev,
 					alpm_status_func(CLEAR_MODE_STATUS);
 
 					mutex_lock(&vdd->mfd_dsi[DISPLAY_1]->bl_lock);
-					pdata->set_backlight(pdata, vdd->bl_level);
+
+					if (vdd->bl_level)
+						backup_bl_level = vdd->bl_level;
+
+					pdata->set_backlight(pdata, backup_bl_level);
 					mutex_unlock(&vdd->mfd_dsi[DISPLAY_1]->bl_lock);
 
 					pr_info("[ALPM_DEBUG] %s: Send ALPM off cmds\n", __func__);
@@ -3917,6 +3932,7 @@ void mdss_mdp_underrun_dump_info(void)
 	int pcount = mdp5_data->mdata->nrgb_pipes+ mdp5_data->mdata->nvig_pipes+mdp5_data->mdata->ndma_pipes;
 
 	pr_err(" ============ %s start ===========\n",__func__);
+	mutex_lock(&mdp5_data->list_lock);
 	list_for_each_entry(pipe, &mdp5_data->pipes_used, list) {
 		if (pipe)
 			pr_err(" [%4d, %4d, %4d, %4d] -> [%4d, %4d, %4d, %4d]"
@@ -3929,6 +3945,7 @@ void mdss_mdp_underrun_dump_info(void)
 		pcount--;
 		if (!pcount) break;
 	}
+	mutex_unlock(&mdp5_data->list_lock);
 
 	pr_err("mdp_clk = %ld, bus_ab = %llu, bus_ib = %llu\n", mdss_mdp_get_clk_rate(MDSS_CLK_MDP_SRC),
 			mdss_res->bus_scale_table->usecase[mdss_res->curr_bw_uc_idx].vectors[0].ab,

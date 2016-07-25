@@ -3268,6 +3268,10 @@ void __init apq8084_init_gpiomux(void)
 	} else {
 		msm_gpiomux_install(apq8084_hsic_configs,
 			ARRAY_SIZE(apq8084_hsic_configs));
+#if 0
+		msm_gpiomux_install_nowrite(msm_hdmi_configs,
+			ARRAY_SIZE(msm_hdmi_configs));
+#endif
 		msm_gpiomux_install(msm_hdmi_configs,
 			ARRAY_SIZE(msm_hdmi_configs));
 	}

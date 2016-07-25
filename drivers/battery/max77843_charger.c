@@ -103,7 +103,7 @@ static void max77843_test_read(struct max77843_charger_data *charger)
 {
 	u8 data = 0;
 	u32 addr = 0;
-	for (addr = 0xB0; addr <= 0xC3; addr++) {
+	for (addr = 0xB1; addr <= 0xC3; addr++) {
 		max77843_read_reg(charger->i2c, addr, &data);
 		//pr_debug("MAX77843 addr : 0x%02x data : 0x%02x\n", addr, data);
 	}
@@ -112,11 +112,15 @@ static void max77843_test_read(struct max77843_charger_data *charger)
 static int max77843_get_vbus_state(struct max77843_charger_data *charger)
 {
 	u8 reg_data;
+	union power_supply_propval value;
 
 	max77843_read_reg(charger->i2c,
 			  MAX77843_CHG_REG_DETAILS_00, &reg_data);
 
-	if (charger->cable_type == POWER_SUPPLY_TYPE_WIRELESS)
+	psy_do_property("battery", get, POWER_SUPPLY_PROP_ONLINE,
+			value);
+
+	if (value.intval == POWER_SUPPLY_TYPE_WIRELESS)
 		reg_data = ((reg_data & MAX77843_WCIN_DTLS) >>
 			    MAX77843_WCIN_DTLS_SHIFT);
 	else
@@ -1399,7 +1403,7 @@ static int max77843_debugfs_show(struct seq_file *s, void *data)
 
 	seq_printf(s, "MAX77843 CHARGER IC :\n");
 	seq_printf(s, "===================\n");
-	for (reg = 0xB0; reg <= 0xC3; reg++) {
+	for (reg = 0xB1; reg <= 0xC3; reg++) {
 		max77843_read_reg(charger->i2c, reg, &reg_data);
 		seq_printf(s, "0x%02x:\t0x%02x\n", reg, reg_data);
 	}

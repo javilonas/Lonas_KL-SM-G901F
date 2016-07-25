@@ -93,7 +93,7 @@ ENTRY(cpu_v7_switch_mm)
 
 	isb
 #endif
-	mov	pc, lr
+	bx	lr
 ENDPROC(cpu_v7_switch_mm)
 
 #ifdef CONFIG_TIMA_RKP_L2_GROUP
@@ -378,7 +378,7 @@ ENTRY(cpu_v7_set_pte_ext)
 	ALT_SMP(W(nop))
 	ALT_UP (mcr	p15, 0, r0, c7, c10, 1)		@ flush_pte
 #endif
-	mov	pc, lr
+	bx	lr
 #ifdef	CONFIG_TIMA_RKP_30
 cpu_v7_set_pte_ext_proc_end:
 #endif

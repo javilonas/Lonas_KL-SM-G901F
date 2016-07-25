@@ -146,7 +146,6 @@ extern int poweroff_charging;
 
 #undef DO_NOT_USE_FUNC_PARAM
 
-
 #define CONFIG_GLOVE_TOUCH
 #ifdef CONFIG_GLOVE_TOUCH
 #define	TKEY_GLOVE_DWORK_TIME	300

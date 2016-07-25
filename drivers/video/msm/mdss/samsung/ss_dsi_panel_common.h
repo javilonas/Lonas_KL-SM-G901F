@@ -68,6 +68,9 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
 #define PARSE_STRING 64
 #define MAX_EXTRA_POWER_GPIO 3
 
+/* Before ALPM Brightenss */
+#define ALPM_BRIGHTNESS 0
+
 /* Brightness stuff */
 #define BRIGHTNESS_MAX_PACKET 50
 #define HBM_MODE 6

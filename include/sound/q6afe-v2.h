@@ -218,6 +218,7 @@ void afe_clear_config(enum afe_config_type config);
 bool afe_has_config(enum afe_config_type config);
 
 void afe_set_aanc_info(struct aanc_data *aanc_info);
+int afe_short_silence(u32 duration);
 #ifdef CONFIG_SND_SOC_MAXIM_DSM
 int32_t dsm_open(int32_t port_id, uint32_t *dsm_params, u8 *param);
 #endif

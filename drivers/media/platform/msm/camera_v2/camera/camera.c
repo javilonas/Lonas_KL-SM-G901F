@@ -39,6 +39,10 @@ extern pid_t qdaemon_pid;
 extern pid_t qdaemon_tgid;
 #define QDAEMON "mm-qcamera"
 
+extern pid_t qdaemon_pid;
+extern pid_t qdaemon_tgid;
+#define QDAEMON "mm-qcamera"
+
 struct camera_v4l2_private {
 	struct v4l2_fh fh;
 	unsigned int stream_id;

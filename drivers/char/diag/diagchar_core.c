@@ -47,8 +47,6 @@
 #include <linux/compat.h>
 #endif
 
-#include <linux/of.h>
-
 MODULE_DESCRIPTION("Diag Char Driver");
 MODULE_LICENSE("GPL v2");
 MODULE_VERSION("1.0");
@@ -83,10 +81,6 @@ static unsigned int threshold_client_limit = 30;
 /* This is the maximum number of pkt registrations supported at initialization*/
 int diag_max_reg = 600;
 int diag_threshold_reg = 750;
-
-#ifdef CONFIG_SAMSUNG_PRODUCT_SHIP
-static int enable_diag;
-#endif
 
 /* Timer variables */
 static struct timer_list drain_timer;
@@ -622,7 +616,9 @@ static int diag_copy_dci(char __user *buf, size_t count,
 {
 	int total_data_len = 0;
 	int ret = 0;
+	int write_len = 0;
 	int exit_stat = 1;
+	uint8_t drain_again = 0;
 	struct diag_dci_buffer_t *buf_entry, *temp;
 	struct diag_smd_info *smd_info = NULL;
 
@@ -631,19 +627,32 @@ static int diag_copy_dci(char __user *buf, size_t count,
 
 	ret = *pret;
 
-	ret += 4;
+	ret += sizeof(int);
+	if (ret >= count) {
+		pr_err("diag: In %s, invalid value for ret: %d, count: %d\n",
+		       __func__, ret, count);
+		return -EINVAL;
+	}
 
 	mutex_lock(&entry->write_buf_mutex);
 	list_for_each_entry_safe(buf_entry, temp, &entry->list_write_buf,
 								buf_track) {
+
+		if ((ret + buf_entry->data_len) > count) {
+			drain_again = 1;
+			break;
+		}
+
 		list_del(&buf_entry->buf_track);
 		mutex_lock(&buf_entry->data_mutex);
 		if ((buf_entry->data_len > 0) &&
 		    (buf_entry->in_busy) &&
 		    (buf_entry->data)) {
 			if (copy_to_user(buf+ret, (void *)buf_entry->data,
-					 buf_entry->data_len))
+					 buf_entry->data_len)) {
+				pr_err("diag: pkt dropped\n");
 				goto drop;
+			}
 			ret += buf_entry->data_len;
 			total_data_len += buf_entry->data_len;
 			diag_ws_on_copy(DIAG_WS_DCI);
@@ -682,25 +691,23 @@ drop:
 
 	if (total_data_len > 0) {
 		/* Copy the total data length */
-		COPY_USER_SPACE_OR_EXIT(buf+8, total_data_len, 4);
-		ret -= 4;
-		/*
-		 * Flush any read that is currently pending on DCI data and
-		 * command channnels. This will ensure that the next read is not
-		 * missed.
-		 */
-		flush_workqueue(driver->diag_dci_wq);
-		diag_ws_on_copy_complete(DIAG_WS_DCI);
+		write_len = copy_to_user(buf + 8, (void *)&total_data_len, 4);
+		if (write_len) {
+			goto exit;
+		}
 	} else {
 		pr_debug("diag: In %s, Trying to copy ZERO bytes, total_data_len: %d\n",
 			__func__, total_data_len);
 	}
 
-	entry->in_service = 0;
 	exit_stat = 0;
 exit:
+	entry->in_service = 0;
 	mutex_unlock(&entry->write_buf_mutex);
 	*pret = ret;
+	if (drain_again)
+		dci_drain_data(0);
+
 	return exit_stat;
 }
 
@@ -816,6 +823,7 @@ static int diag_command_reg(struct bindpkt_params_per_process *pkt_params)
 				mutex_unlock(&driver->diagchar_mutex);
 				return retval;
 			}
+			driver->socket_process = NULL;
 		}
 		kfree(head_params);
 		mutex_unlock(&driver->diagchar_mutex);
@@ -1665,7 +1673,6 @@ drop:
 	if (driver->data_ready[index] & DCI_DATA_TYPE) {
 		/* Copy the type of data being passed */
 		data_type = driver->data_ready[index] & DCI_DATA_TYPE;
-		driver->data_ready[index] ^= DCI_DATA_TYPE;
 		list_for_each_safe(start, temp, &driver->dci_client_list) {
 			entry = list_entry(start, struct diag_dci_client_tbl,
 									track);
@@ -1680,6 +1687,7 @@ drop:
 			DIAG_LOG(DIAG_DEBUG_HIGH, "[%s] + copying dci data to user\n", __func__);
 			copy_dci_data = 1;
 			exit_stat = diag_copy_dci(buf, count, entry, &ret);
+			driver->data_ready[index] ^= DCI_DATA_TYPE;
 			DIAG_LOG(DIAG_DEBUG_HIGH, "[%s] - copying dci data to user, exit_stat: %d\n", __func__, exit_stat);
 			if (exit_stat == 1)
 				goto exit;
@@ -1704,6 +1712,7 @@ drop:
 		goto exit;
 	}
 exit:
+	mutex_unlock(&driver->diagchar_mutex);
 	if (copy_data) {
 		/*
 		 * Flush any work that is currently pending on the data
@@ -1714,9 +1723,16 @@ exit:
 		wake_up(&driver->smd_wait_q);
 		diag_ws_on_copy_complete(DIAG_WS_MD);
 	}
-	if (copy_dci_data)
+	/*
+	 * Flush any read that is currently pending on DCI data and
+	 * command channnels. This will ensure that the next read is not
+	 * missed.
+	 */
+	if (copy_dci_data) {
+		diag_ws_on_copy_complete(DIAG_WS_DCI);
+		flush_workqueue(driver->diag_dci_wq);
 		DIAG_LOG(DIAG_DEBUG_HIGH, "[%s] - finished copying data in this iteration\n", __func__);
-	mutex_unlock(&driver->diagchar_mutex);
+	}
 	return ret;
 }
 
@@ -2528,17 +2544,6 @@ void diagfwd_bridge_fn(int type)
 #else
 inline void diagfwd_bridge_fn(int type) { }
 #endif
-
-#ifdef CONFIG_SAMSUNG_PRODUCT_SHIP
-static int check_diagchar_enabled(char *str)
-{
-	get_option(&str, &enable_diag);
-	pr_debug("%s : enable_diag = %s\n", __func__, ((enable_diag) ? "Yes":"No"));
-	return 0;
-}
-__setup("diag=", check_diagchar_enabled);
-#endif
-
 static int __init diagchar_init(void)
 {
 	dev_t dev;
@@ -2546,13 +2551,6 @@ static int __init diagchar_init(void)
 
 	pr_debug("diagfwd initializing ..\n");
 	ret = 0;
-
-#ifdef CONFIG_SAMSUNG_PRODUCT_SHIP
-	if (!enable_diag) {
-		pr_info("diagchar_core isn't enabled.\n");
-		return -EPERM;
-	}
-#endif
 
 	driver = kzalloc(sizeof(struct diagchar_dev) + 5, GFP_KERNEL);
 	if (!driver)

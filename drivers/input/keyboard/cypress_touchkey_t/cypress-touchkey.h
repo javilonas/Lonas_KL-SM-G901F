@@ -49,6 +49,12 @@ extern int poweroff_charging;
 #define USE_TKEY_UPDATE_WORK
 #define TKEY_REQUEST_FW_UPDATE
 
+#if defined(CONFIG_SEC_TRLTE_PROJECT)
+#define CYPRESS_RECENT_BACK_REPORT_FW_VER	0x11
+#else
+#define CYPRESS_RECENT_BACK_REPORT_FW_VER	0xFF
+#endif
+
 #define CYPRESS_GEN			0X00
 #define CYPRESS_OP_MODE			0X01
 #define CYPRESS_SP_REG			0X02
@@ -57,6 +63,7 @@ extern int poweroff_charging;
 #define CYPRESS_MODULE_VER		0X05
 #define CYPRESS_DEVICE_VER		0X06
 #define CYPRESS_STATUS_FLAG		0X07
+#define CYPRESS_DETECTION_FLAG		0x08
 #define CYPRESS_THRESHOLD		0X09
 #define CYPRESS_THRESHOLD2		0X0A
 #define CYPRESS_IDAC_MENU		0x0D
@@ -74,6 +81,11 @@ extern int poweroff_charging;
 #define USE_OPEN_CLOSE
 #define CRC_CHECK_INTERNAL
 
+/* GEN CMD */
+#define TK_CMD_DUAL_DETECTION	0x01
+#define TK_CMD_LED_ON		0x10
+#define TK_CMD_LED_OFF		0x20
+
 /* OP MODE CMD */
 #define TK_BIT_CMD_LEDCONTROL	0x40    /* Owner for LED on/off control (0:host / 1:TouchIC) */
 #define TK_BIT_CMD_INSPECTION	0x20    /* Inspection mode */
@@ -83,8 +95,9 @@ extern int poweroff_charging;
 #define TK_BIT_CMD_TA_ON	0x02    /* Ta mode */
 #define TK_BIT_CMD_REGULAR	0x01    /* regular mode = normal mode */
 
-#define TK_BIT_WRITE_CONFIRM	0xAA
-#define TK_BIT_EXIT_CONFIRM	0xBB
+#define TK_BIT_WRITE_CONFIRM		0xAA
+#define TK_BIT_EXIT_CONFIRM		0xBB
+#define TK_BIT_DETECTION_CONFIRM	0xEE
 
 /* STATUS FLAG */
 #define TK_BIT_LEDCONTROL	0x40    /* Owner for LED on/off control (0:host / 1:TouchIC) */
@@ -98,9 +111,6 @@ extern int poweroff_charging;
 /* bit masks*/
 #define PRESS_BIT_MASK		0X08
 #define KEYCODE_BIT_MASK	0X07
-
-#define TK_CMD_LED_ON		0x10
-#define TK_CMD_LED_OFF		0x20
 
 #define NUM_OF_RETRY_UPDATE	5
 

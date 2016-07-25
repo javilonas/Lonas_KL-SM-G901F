@@ -875,10 +875,10 @@ struct dwc3 {
 	bool			err_evt_seen;
 	bool			enable_suspend_event;
 	struct dwc3_gadget_events	dbg_gadget_events;
-	unsigned long		irq_cnt;
 
 	/* offload IRQ handling to tasklet */
 	int			irq;
+	unsigned long		irq_cnt;
 	struct tasklet_struct	bh;
 	unsigned                bh_completion_time[MAX_INTR_STATS];
 	unsigned                bh_handled_evt_cnt[MAX_INTR_STATS];

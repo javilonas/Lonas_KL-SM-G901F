@@ -166,6 +166,13 @@ config SAMP_HOTNESS
 	  This option change kill hidden process policy in LMK
 
 
+config SAMP_HOTNESS
+	bool "Kill hidden process by hotness"
+	default n
+	help
+	  This option change kill hidden process policy in LMK
+
+
 endif # if ANDROID
 
 endmenu

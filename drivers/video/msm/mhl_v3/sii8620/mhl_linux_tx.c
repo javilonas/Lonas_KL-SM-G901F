@@ -4716,11 +4716,12 @@ int mhl_tx_init(struct mhl_drv_info const *drv_info, struct device *parent_dev)
 
 #ifdef CONFIG_MHL3_SEC_FEATURE
 	disable_irq(drv_info->irq);
-
+#if 0
 	if (dev_context->pdata->hdmi_mhl_ops) {
 		struct msm_hdmi_mhl_ops *hdmi_mhl_ops = dev_context->pdata->hdmi_mhl_ops;
 		hdmi_mhl_ops->set_mhl_max_pclk(dev_context->pdata->hdmi_pdev, 300000);
 	}
+#endif
 #endif
 
 	/* Initialize the MHL transmitter hardware. */

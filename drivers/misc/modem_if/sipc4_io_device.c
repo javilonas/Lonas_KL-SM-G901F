@@ -970,7 +970,7 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	int s_state;
 	struct io_device *iod = (struct io_device *)filp->private_data;
 	struct link_device *ld = get_current_link(iod);
-	char cpinfo_buf[530] = "CP Crash ";
+	char cpinfo_buf[530] = "CP Crash";
 	char str[TASK_COMM_LEN];
 	int phone_active_value;
 
@@ -1038,13 +1038,7 @@ static long misc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case IOCTL_MODEM_CP_UPLOAD:
 		mif_err("misc_ioctl : IOCTL_MODEM_CP_UPLOAD\n");
-		if (strlen((char *)arg) <= 1)
-			panic("CP Crash");
-		else if (copy_from_user(cpinfo_buf + strlen(cpinfo_buf),
-			(void __user *)arg, MAX_CPINFO_SIZE) != 0)
-			panic("CP Crash");
-		else
-			panic(cpinfo_buf);
+		panic(cpinfo_buf);
 		return 0;
 
 	case IOCTL_MODEM_DUMP_RESET:

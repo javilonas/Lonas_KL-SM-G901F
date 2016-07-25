@@ -33,6 +33,9 @@ int led_flash_en;
 pid_t qdaemon_pid;
 pid_t qdaemon_tgid;
 
+pid_t qdaemon_pid;
+pid_t qdaemon_tgid;
+
 static int32_t msm_camera_get_power_settimgs_from_sensor_lib(
 	struct msm_camera_power_ctrl_t *power_info,
 	struct msm_sensor_power_setting_array *power_setting_array)
@@ -475,8 +478,8 @@ int msm_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 	rc = msm_camera_power_up(power_info, s_ctrl->sensor_device_type,
 		sensor_i2c_client, s_ctrl->cci_i2c_master);
 	if (rc < 0) {
-            pr_err("%s : power up failed\n", __func__);
-            return rc;
+		pr_err("%s : power up failed\n", __func__);
+		return rc;
 	}
 	s_ctrl->sensor_state = MSM_SENSOR_POWER_UP;
 

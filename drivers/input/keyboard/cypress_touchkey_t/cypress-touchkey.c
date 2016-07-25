@@ -100,6 +100,57 @@ static int cypress_touchkey_i2c_write(struct i2c_client *client,
 	return err;
 }
 
+static void cypress_touchkey_interrupt_set_dual(struct i2c_client *client)
+{
+	struct cypress_touchkey_info *info = dev_get_drvdata(&client->dev);
+	int ret = 0;
+	int retry = 5;
+	u8 data[3] = {0, };
+
+	if (info->device_ver != 0x40) { /* support CYPRESS MBR3155 */
+		dev_err(&client->dev, "%s: not support this module\n", __func__);
+		return;
+	}
+
+	if (info->ic_fw_ver <= CYPRESS_RECENT_BACK_REPORT_FW_VER) {
+		dev_err(&client->dev, "%s: not support this version\n", __func__);
+		return;
+	}
+
+	while (retry--) {
+		data[0] = TK_CMD_DUAL_DETECTION;
+		data[1] = 0x00;
+		data[2] = TK_BIT_DETECTION_CONFIRM;
+
+		ret = i2c_smbus_write_i2c_block_data(client, CYPRESS_GEN, 3, &data[0]);
+		if (ret < 0) {
+			dev_err(&client->dev, "%s: i2c write error. (%d)\n", __func__, ret);
+			msleep(30);
+			continue;
+		}
+		msleep(30);
+
+		data[0] = CYPRESS_DETECTION_FLAG;
+
+		ret = i2c_smbus_read_i2c_block_data(client, data[0], 1, &data[1]);
+		if (ret < 0) {
+			dev_err(&client->dev, "%s: i2c read error. (%d)\n", __func__, ret);
+			msleep(30);
+			continue;
+		}
+
+		if (data[1] != 1) {
+			dev_err(&client->dev,
+				"%s: interrupt set: 0x%X, failed.\n", __func__, data[1]);
+			continue;
+		}
+
+		dev_info(&client->dev, "%s: interrupt set: 0x%X\n", __func__, data[1]);
+		break;
+	}
+
+}
+
 static int tkey_i2c_check(struct cypress_touchkey_info *info)
 {
 	struct i2c_client *client = info->client;
@@ -130,6 +181,9 @@ static int tkey_i2c_check(struct cypress_touchkey_info *info)
 	else
 		dev_info(&client->dev, "%s: CY device(0x%02x) is not supported ver.\n"
 					,__func__,info->device_ver);
+
+	/* CYPRESS Firmware setting interrupt type : dual or single interrupt */
+	cypress_touchkey_interrupt_set_dual(info->client);
 
 	/* Read internal checksum*/
 #ifdef CRC_CHECK_INTERNAL
@@ -272,6 +326,9 @@ static void cypress_touchkey_reset(struct cypress_touchkey_info *info)
 
 	cypress_power_onoff(&info->client->dev, 1);
 	msleep(200);
+
+	/* CYPRESS Firmware setting interrupt type : dual or single interrupt */
+	cypress_touchkey_interrupt_set_dual(info->client);
 
 	info->enabled = true;
 
@@ -587,27 +644,68 @@ static irqreturn_t cypress_touchkey_interrupt(int irq, void *dev_id)
 	}
 
 	buf[0] = ret;
-	press = !(buf[0] & PRESS_BIT_MASK);
-	code = (int)(buf[0] & KEYCODE_BIT_MASK) - 1;
-	dev_info(&info->client->dev,
-			"%s: %s key %s. fw=0x%x, md=0x%x \n", __func__,
-			code ? "back" : "recent", press ? "pressed" : "released",
-			info->ic_fw_ver, info->module_ver);
 
-	if (code < 0) {
+	/* L OS support Screen Pinning feature.
+	 * "recent + back key" event is CombinationKey for exit Screen Pinning mode.
+	 * If touchkey firmware version is higher than CYPRESS_RECENT_BACK_REPORT_FW_VER,
+	 * touchkey can make interrupt "back key" and "recent key" in same time.
+	 * lower version firmware can make interrupt only one key event.
+	 */
+	if (info->ic_fw_ver >= CYPRESS_RECENT_BACK_REPORT_FW_VER) {
+		int menu_data = buf[0] & 0x3;
+		int back_data = (buf[0] >> 2) & 0x3;
+		u8 menu_press = menu_data % 2;
+		u8 back_press = back_data % 2;
+
+		if (menu_data)
+			input_report_key(info->input_dev, info->keycode[0], menu_press);
+		if (back_data)
+			input_report_key(info->input_dev, info->keycode[1], back_press);
+
+		press = menu_press | back_press;
+
+#ifndef CONFIG_SAMSUNG_PRODUCT_SHIP
 		dev_info(&info->client->dev,
-				"%s, not profer interrupt 0x%2X.(release all finger)\n",
-				__func__, buf[0]);
-		/* need release all finger function. */
-		for (i = 0; i < info->pdata->keycodes_size; i++) {
-			input_report_key(info->input_dev, info->keycode[i], 0);
-			input_sync(info->input_dev);
+				"%s: %s%s%X, fw_ver: 0x%x, modue_ver: 0x%x\n", __func__,
+				menu_data ? (menu_press ? "menu P " : "menu R ") : "",
+				back_data ? (back_press ? "back P " : "back R ") : "",
+				buf[0], info->ic_fw_ver, info->module_ver);
+#else
+		dev_info(&info->client->dev, "%s: key %s%s fw_ver: 0x%x, modue_ver: 0x%x\n", __func__,
+				menu_data ? (menu_press ? "P" : "R") : "",
+				back_data ? (back_press ? "P" : "R") : "",
+				info->ic_fw_ver, info->module_ver);
+#endif
+
+	} else {
+		press = !(buf[0] & PRESS_BIT_MASK);
+		code = (int)(buf[0] & KEYCODE_BIT_MASK) - 1;
+#ifndef CONFIG_SAMSUNG_PRODUCT_SHIP
+		dev_info(&info->client->dev,
+				"%s: %s key %s. fw=0x%x, md=0x%x \n", __func__,
+				code ? "back" : "recent", press ? "pressed" : "released",
+				info->ic_fw_ver, info->module_ver);
+#else
+		dev_info(&info->client->dev,
+				"%s: %s. fw=0x%x, md=0x%x \n", __func__,
+				press ? "pressed" : "released",
+				info->ic_fw_ver, info->module_ver);
+#endif
+		if (code < 0) {
+			dev_info(&info->client->dev,
+					"%s, not profer interrupt 0x%2X.(release all finger)\n",
+					__func__, buf[0]);
+			/* need release all finger function. */
+			for (i = 0; i < info->pdata->keycodes_size; i++) {
+				input_report_key(info->input_dev, info->keycode[i], 0);
+				input_sync(info->input_dev);
+			}
+			goto out;
 		}
-		goto out;
-	}
 
 		input_report_key(info->input_dev, info->keycode[code], press);
-		input_sync(info->input_dev);
+	}
+	input_sync(info->input_dev);
 
 #ifdef TKEY_BOOSTER
 	if (info->tkey_booster->dvfs_set)
@@ -2132,6 +2230,9 @@ static int cypress_input_open(struct input_dev *dev)
 
 	cypress_power_onoff(&info->client->dev, 1);
 	msleep(150);
+
+	/* CYPRESS Firmware setting interrupt type : dual or single interrupt */
+	cypress_touchkey_interrupt_set_dual(info->client);
 
 	info->enabled = true;
 

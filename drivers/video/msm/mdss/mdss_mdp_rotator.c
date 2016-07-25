@@ -721,6 +721,7 @@ dst_buf_fail:
 	MDSS_XLOG(req->id, 0xE);
 session_fail:
 	mutex_unlock(&rotator_lock);
+	MDSS_XLOG(req->id, 0x22);
 	return ret;
 }
 

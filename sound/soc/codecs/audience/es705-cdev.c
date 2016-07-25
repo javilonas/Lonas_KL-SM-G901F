@@ -1196,10 +1196,11 @@ read_err:
 static int datablock_write_dispatch(struct es705_priv * const es705,
 				u32 cmd, size_t count)
 {
-	char *data = data_buf += sizeof(cmd);
+	char *data = data_buf + sizeof(cmd);
 	int remains = (int)count - sizeof(cmd);
 	int err = 0;
 	u32 cmd_id = cmd >> 16;
+
 	if (cmd_id == ES705_WDB_CMD) {
 		err = es705->datablockdev.wdb(es705, data, remains);
 		/* If WDB is sucessful, it will return count = remains.
@@ -1239,7 +1240,13 @@ static ssize_t datablock_write(struct file *filp, const char __user *buf,
 	int err = 0;
 
 	BUG_ON(!es705);
-	dev_dbg(es705->dev, "%s() entry: count: %d\n", __func__, count);
+	dev_dbg(es705->dev, "%s() entry: count: %zd\n", __func__, count);
+
+	if (count > sizeof(parse_buffer)) {
+		dev_err(es705->dev, "%s() invalid argument\n", __func__);
+		err = -EINVAL;
+		goto OUT;
+	}
 
 	err = copy_from_user(data_buf, buf, count);
 	if (err) {

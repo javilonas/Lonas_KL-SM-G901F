@@ -317,7 +317,7 @@ static void mdss_fb_parse_dt_split(struct msm_fb_data_type *mfd)
 		"qcom,mdss-fb-split", data, 2);
 
 	if (!mdss_fb_validate_split(data[0], data[1], mfd))
-		pr_debug("dt split_left=%d split_right=%d\n", data[0], data[1]);
+		pr_err("dt split_left=%d split_right=%d\n", data[0], data[1]);
 }
 
 static ssize_t mdss_fb_store_split(struct device *dev,
@@ -338,17 +338,6 @@ static ssize_t mdss_fb_store_split(struct device *dev,
 	return len;
 }
 
-static ssize_t mdss_fb_show_split(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	ssize_t ret = 0;
-	struct fb_info *fbi = dev_get_drvdata(dev);
-	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
-	ret = snprintf(buf, PAGE_SIZE, "%d %d\n",
-		       mfd->split_fb_left, mfd->split_fb_right);
-	return ret;
-}
-
 static void mdss_fb_get_split(struct msm_fb_data_type *mfd)
 {
 	if (mfd->index != 0)
@@ -360,6 +349,22 @@ static void mdss_fb_get_split(struct msm_fb_data_type *mfd)
 	if (mfd->split_fb_left || mfd->split_fb_right)
 		pr_debug("split framebuffer left=%d right=%d\n",
 			mfd->split_fb_left, mfd->split_fb_right);
+}
+
+static ssize_t mdss_fb_show_split(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+
+	if((mfd->split_fb_left == 0) && (mfd->split_fb_right == 0)){
+		printk("No split info => set as split info\n");
+		mdss_fb_get_split(mfd);
+	}
+	ret = snprintf(buf, PAGE_SIZE, "%d %d\n",
+		       mfd->split_fb_left, mfd->split_fb_right);
+	return ret;
 }
 
 static ssize_t mdss_mdp_show_blank_event(struct device *dev,
@@ -2125,6 +2130,11 @@ static void __mdss_fb_wait_for_fence_sub(struct msm_sync_pt_data *sync_pt_data,
 		if (ret == -ETIME) {
 			pr_warn("%s: sync_fence_wait timed out! ",
 					sync_pt_data->fence_name);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+			pr_warn("%s: sync_fence_wait timed out! - timeline (%d,%d)\n",
+				sync_pt_data->fence_name, sync_pt_data->timeline_value, sync_pt_data->timeline->value);
+			xlog_fence_dump();
+#endif
 			pr_cont("Waiting %ld more seconds\n",
 					WAIT_FENCE_FINAL_TIMEOUT/MSEC_PER_SEC);
 			ret = sync_fence_wait(fences[i],
@@ -2171,13 +2181,27 @@ void mdss_fb_signal_timeline(struct msm_sync_pt_data *sync_pt_data)
 			sync_pt_data->timeline) {
 		sw_sync_timeline_inc(sync_pt_data->timeline, 1);
 		sync_pt_data->timeline_value++;
-
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+		xlog_fence((char*)__func__, sync_pt_data->fence_name, 0,
+			"timeline_val", sync_pt_data->timeline_value,
+			"remaining", atomic_read(&sync_pt_data->commit_cnt),
+			NULL, 0, NULL, 0, 0xAA);
+#else
 		pr_debug("%s: buffer signaled! timeline val=%d remaining=%d\n",
 			sync_pt_data->fence_name, sync_pt_data->timeline_value,
 			atomic_read(&sync_pt_data->commit_cnt));
+#endif
 	} else {
-		pr_debug("%s timeline signaled without commits val=%d\n",
-			sync_pt_data->fence_name, sync_pt_data->timeline_value);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+		xlog_fence((char*)__func__, sync_pt_data->fence_name, 0,
+			"timeline_val", sync_pt_data->timeline_value,
+			"remaining", atomic_read(&sync_pt_data->commit_cnt),
+			NULL, 0, NULL, 0, 0xBB);
+#else
+		pr_debug("%s: buffer signaled! timeline val=%d remaining=%d\n",
+			sync_pt_data->fence_name, sync_pt_data->timeline_value,
+			atomic_read(&sync_pt_data->commit_cnt));
+#endif
 	}
 	mutex_unlock(&sync_pt_data->sync_mutex);
 }
@@ -2200,6 +2224,11 @@ static void mdss_fb_release_fences(struct msm_fb_data_type *mfd)
 	if (sync_pt_data->timeline) {
 		val = sync_pt_data->threshold +
 			atomic_read(&sync_pt_data->commit_cnt);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+		xlog_fence((char*)__func__, "Val", val,
+		"timeline_value", atomic_read(&sync_pt_data->commit_cnt),
+		NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 		sw_sync_timeline_inc(sync_pt_data->timeline, val);
 		sync_pt_data->timeline_value += val;
 		atomic_set(&sync_pt_data->commit_cnt, 0);
@@ -2259,6 +2288,10 @@ static int __mdss_fb_sync_buf_done_callback(struct notifier_block *p,
 		break;
 	case MDP_NOTIFY_FRAME_DONE:
 		pr_debug("%s: frame done\n", sync_pt_data->fence_name);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+		xlog_fence((char*)__func__, "## Frame Done", 0,
+		NULL, 0, NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 		mdss_fb_signal_timeline(sync_pt_data);
 		break;
 	case MDP_NOTIFY_FRAME_CONFIG_DONE:
@@ -2364,6 +2397,12 @@ static int mdss_fb_pan_display_ex(struct fb_info *info,
 
 	mfd->msm_fb_backup.info = *info;
 	mfd->msm_fb_backup.disp_commit = *disp_commit;
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	if(atomic_read(&mfd->mdp_sync_pt_data.commit_cnt) > 1);
+		xlog_fence((char*)__func__, "## pan_disp_ex:commit",
+			atomic_read(&mfd->mdp_sync_pt_data.commit_cnt),
+			NULL, 0, NULL, 0, NULL, 0, NULL, 0, 0);
+#endif
 
 	atomic_inc(&mfd->mdp_sync_pt_data.commit_cnt);
 	atomic_inc(&mfd->commits_pending);
@@ -2887,6 +2926,28 @@ static int mdss_fb_handle_buf_sync_ioctl(struct msm_sync_pt_data *sync_pt_data,
 
 	val = sync_pt_data->timeline_value + sync_pt_data->threshold +
 			atomic_read(&sync_pt_data->commit_cnt);
+#if defined(CONFIG_FB_MSM_MDSS_FENCE_DBG)
+	if(atomic_read(&sync_pt_data->commit_cnt) > 1)
+		xlog_fence((char*)__func__, "## err1 - val", val,
+				"timeline_val", sync_pt_data->timeline_value,
+				"threshold", sync_pt_data->threshold,
+				"commit", atomic_read(&sync_pt_data->commit_cnt),
+				NULL, 0, 0xAAA);
+
+	if(sync_pt_data->timeline_value != sync_pt_data->timeline->value)
+		xlog_fence((char*)__func__, "## err2 - val", val,
+				"timeline_val", sync_pt_data->timeline_value,
+				"threshold", sync_pt_data->threshold,
+				"commit", atomic_read(&sync_pt_data->commit_cnt),
+				NULL, 0, 0xBBB);
+
+	if(val - sync_pt_data->timeline_value > 3)
+		xlog_fence((char*)__func__, "## err3 - val", val,
+				"timeline_val", sync_pt_data->timeline_value,
+				"threshold", sync_pt_data->threshold,
+				"commit", atomic_read(&sync_pt_data->commit_cnt),
+				NULL, 0, 0xCCC);
+#endif
 
 	/* Set release fence */
 	rel_fence = mdss_fb_sync_get_fence(sync_pt_data->timeline,
@@ -3193,6 +3254,13 @@ int mdss_register_panel(struct platform_device *pdev,
 		goto mdss_notfound;
 	}
 
+	if (pdata && !pdata->panel_info.is_prim_panel &&
+		!fbi_list_index) {
+		pr_err("%s %d panel deferred, first panel not prim\n",
+			__func__, pdata->panel_info.type);
+		return -EPROBE_DEFER;
+	}
+
 	fb_pdev = of_find_device_by_node(node);
 	if (fb_pdev) {
 		rc = mdss_fb_register_extra_panel(fb_pdev, pdata);
@@ -3274,7 +3342,7 @@ module_init(mdss_fb_init);
 int mdss_fb_suspres_panel(struct device *dev, void *data)
 {
 	struct msm_fb_data_type *mfd;
-	int rc;
+	int rc = 0;
 	u32 event;
 
 	if (!data) {
@@ -3287,10 +3355,14 @@ int mdss_fb_suspres_panel(struct device *dev, void *data)
 
 	event = *((bool *) data) ? MDSS_EVENT_RESUME : MDSS_EVENT_SUSPEND;
 
-	rc = mdss_fb_send_panel_event(mfd, event, NULL);
-	if (rc)
-		pr_warn("unable to %s fb%d (%d)\n",
-			event == MDSS_EVENT_RESUME ? "resume" : "suspend",
-			mfd->index, rc);
+	/* Do not send runtime suspend/resume for HDMI primary */
+	if (!mdss_fb_is_hdmi_primary(mfd)) {
+		rc = mdss_fb_send_panel_event(mfd, event, NULL);
+		if (rc)
+			pr_warn("unable to %s fb%d (%d)\n",
+				event == MDSS_EVENT_RESUME ?
+				"resume" : "suspend",
+				mfd->index, rc);
+	}
 	return rc;
 }
