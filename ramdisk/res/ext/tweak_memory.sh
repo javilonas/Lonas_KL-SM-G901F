@@ -82,5 +82,28 @@ echo "2048" > /sys/devices/virtual/bdi/179:0/read_ahead_kb
 #echo "512" > /sys/block/mmcblk0/queue/read_ahead_kb
 #echo "256" > /sys/block/mmcblk0rpmb/queue/read_ahead_kb
 
+busybox=/sbin/busybox
+RAM=$((`$busybox awk '/MemTotal/{print $2}' /proc/meminfo`/1024))
+filemax=$(($RAM/4*256))
+mem=`$busybox free | $busybox grep Mem | $busybox awk '{print $2}'`
+totmem=`($busybox echo - | $busybox awk -v A=$mem '{print A*1024;}')`
+max=`($busybox echo - | $busybox awk -v A=$totmem '{print A*75/100;}')`
+$busybox sysctl -w kernel.shmmni=4096
+page_size=`$busybox cat /proc/sys/kernel/shmmni`
+all=`($busybox echo - | $busybox awk -v A=$totmem -v B=$page_size '{print A*80/100/B}')`
+
+#Kernel tweak
+$busybox sysctl -w kernel.sem="350 32768 64 256"
+$busybox sysctl -w kernel.shmmax=$max
+$busybox sysctl -w kernel.shmall=$all
+
+#FS tweak
+$busybox sysctl -w fs.nr_open=524288
+$busybox sysctl -w fs.file-max=$filemax
+$busybox sysctl -w fs.lease-break-time=5
+$busybox sysctl -w fs.inotify.max_queued_events=32000
+$busybox sysctl -w fs.inotify.max_user_instances=256
+$busybox sysctl -w fs.inotify.max_user_watches=10240
+
 echo "" | tee -a $LOG_FILE
 echo "$( date +"%m-%d-%Y %H:%M:%S" ) tweak_memory activated.." | tee -a $LOG_FILE

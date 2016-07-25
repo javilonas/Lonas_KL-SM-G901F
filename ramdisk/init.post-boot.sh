@@ -84,20 +84,26 @@ echo "2" > /proc/sys/kernel/sysrq
 
 sleep 0.9s
 
-# Enable Intelli_thermal
-chmod -h 0777 /sys/module/intelli_thermal/parameters/enabled
-echo "Y" > /sys/module/intelli_thermal/parameters/enabled
-chmod -h 0666 /sys/module/intelli_thermal/parameters/enabled
+# Intelli_thermal
+if [ -e /sys/module/intelli_thermal/parameters/enabled ]; then
+    chmod -h 0777 /sys/module/intelli_thermal/parameters/enabled
+    echo "Y" > /sys/module/intelli_thermal/parameters/enabled
+    chmod -h 0666 /sys/module/intelli_thermal/parameters/enabled
+fi
 
-# Enable Intelli_Plug
-chmod -h 0777 /sys/module/intelli_plug/parameters/intelli_plug_active
-echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
-chmod -h 0666 /sys/module/intelli_plug/parameters/intelli_plug_active
+# Intelli_Plug
+if [ -e /sys/module/intelli_plug/parameters/intelli_plug_active ]; then
+    chmod -h 0777 /sys/module/intelli_plug/parameters/intelli_plug_active
+    echo "1" > /sys/module/intelli_plug/parameters/intelli_plug_active
+    chmod -h 0666 /sys/module/intelli_plug/parameters/intelli_plug_active
+fi
 
-# Enable Simple GPU algorithm.
-chmod -h 0777 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
-echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
-chmod -h 0666 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+# Simple GPU algorithm.
+if [ -e /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate ]; then
+    chmod -h 0777 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+    echo "1" > /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+    chmod -h 0666 /sys/module/simple_gpu_algorithm/parameters/simple_gpu_activate
+fi
 
 sleep 0.5s
 
@@ -143,16 +149,20 @@ sleep 0.3s
 # Init debug level off
 /res/ext/debug_level.sh & > /dev/null 2>&1
 
-# Carga Rápida
-chown system.system /sys/kernel/fast_charge/force_fast_charge
-chmod -h 0777 /sys/kernel/fast_charge/force_fast_charge
-echo "1" > /sys/kernel/fast_charge/force_fast_charge
-chmod -h 0666 /sys/kernel/fast_charge/force_fast_charge
+# Fast Charge
+if [ -e /sys/kernel/fast_charge/force_fast_charge ]; then
+    chown system.system /sys/kernel/fast_charge/force_fast_charge
+    chmod -h 0777 /sys/kernel/fast_charge/force_fast_charge
+    echo "1" > /sys/kernel/fast_charge/force_fast_charge
+    chmod -h 0666 /sys/kernel/fast_charge/force_fast_charge
+fi
 
-# Enable Dynamic FSync
-chmod 0777 /sys/kernel/dyn_fsync/Dyn_fsync_active
-echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
-chmod 0664 /sys/kernel/dyn_fsync/Dyn_fsync_active
+#Dynamic fsync
+if [ -e /sys/kernel/dyn_fsync/Dyn_fsync_active ]; then
+    chmod 0777 /sys/kernel/dyn_fsync/Dyn_fsync_active
+    echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
+    chmod 0664 /sys/kernel/dyn_fsync/Dyn_fsync_active
+fi
 
 # Init Tweaks for batery (intelli thermal)
 /res/ext/intelli_tweaks.sh & > /dev/null 2>&1
